@@ -6,10 +6,20 @@ from pydantic import BaseModel
 from app.utils.validators import validate_tests
 import uvicorn
 from fastapi import APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
 router = APIRouter()
+
+# Allow all origins (for development purposes)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,  # Allows cookies to be sent
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 @app.get("/", tags=["root"])

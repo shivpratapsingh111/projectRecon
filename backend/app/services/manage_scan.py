@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor
-from app.services.pyscripts.process_manager import start_tool
 from app.config.config  import *
 from app.services.pyscripts.urls import func_urls_both
 from app.services.pyscripts.subdomains import func_subdomains_both
@@ -40,7 +39,7 @@ def start_scan(group_name, domain_list, scan_list):
     # Define the actions and their respective functions
     actions = {
         "subdomains_both": func_subdomains_both,
-        "subdomains_ps_only": func_subdomains_ps_only,
+        "subdomainPassive": func_subdomains_ps_only,
         # "subdomains_ac_only": func_subdomains_ac_only,
         # "urls_both": func_urls_both,
         # "urls_ps_only": func_urls_ps_only,

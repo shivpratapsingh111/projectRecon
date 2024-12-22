@@ -47,10 +47,8 @@ def screenshot_subdomains(group_name, domain_list):
         print(f"Screenshoting for {domain}")
         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains/screenshots"
         os.makedirs(result_dir, exist_ok=True) # Making a directory for each domain passed as targets
-
-
-
-        command = f"nuclei -l {root_Data_Dir}/{group_name}/{domain}/subdomains/{subdomainResults} -headless -t ~/nuclei-templates/headless/screenshot.yaml -c 100"
+        
+        command = f"cd {root_Data_Dir}/{group_name}/{domain}/subdomains && nuclei -l {root_Data_Dir}/{group_name}/{domain}/subdomains/{subdomainResults} -headless -t ~/nuclei-templates/headless/screenshot.yaml -c 100"
 
         with open(f"{root_Data_Dir}/{group_name}/{central_log_file}" , "a") as writeLog:
             process = subprocess.Popen(
@@ -61,15 +59,6 @@ def screenshot_subdomains(group_name, domain_list):
             )
             process.wait()
 
-        command = f"mv screenshots {root_Data_Dir}/{group_name}/{domain}/subdomains/"
-        with open(f"{root_Data_Dir}/{group_name}/{central_log_file}" , "a") as writeLog:
-            process = subprocess.Popen(
-                command,
-                # stdout=writeLog,
-                stderr=writeLog,
-                shell=True,
-            )
-            process.wait()
         print(f"Screenshot completed for {domain}")
 
 
