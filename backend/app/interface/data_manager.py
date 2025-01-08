@@ -147,6 +147,17 @@ class GroupManager:
         data['groups'][group_uuid]['domains'][domain_uuid]['commands'][command_name] = command_details
         self._write_to_file(data)
 
+    def get_groups_uuid(self):
+        data = self._read_file()
+
+        group_uuids = []
+
+        for group_uuid in data['groups']:
+            group_uuids.append(group_uuid)
+
+        return group_uuids
+
+
     def get_group_by_uuid(self, group_uuid: str) -> Dict[str, Any]:
         """
         Retrieve a group by its UUID.

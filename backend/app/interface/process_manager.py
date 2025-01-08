@@ -3,6 +3,7 @@ import os
 import json
 import threading
 import multiprocessing
+from multiprocessing import Process, Queue
 import psutil
 import uuid
 import time
@@ -14,6 +15,7 @@ from app.config.config import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 # from app.interface.data_manager import *
 from app.interface.data_manager import GroupManager
+from queue import Empty  # Add this import at the top
 
 # Get current date and time
 current_datetime = datetime.now()
@@ -23,87 +25,209 @@ formatted_time = current_datetime.strftime("%H:%M:%S")
 time_day_date = f"{formatted_time}, {formatted_day}, {formatted_date}"
 data_manager_obj = GroupManager(data_file)
 
-
-def run_command_wrapper(cmd: str, stdout_log_file: str, stderr_log_file: str, domain: str, command_name: str, result_queue: multiprocessing.Queue):
+def process_monitor_worker(process: subprocess.Popen, domain: str, command_name: str, status_queue: Queue):
     """
-    Enhanced command wrapper that captures process completion and exit status.
-    
-    Args:
-        cmd (str): Command to execute
-        stdout_log_file (str): Path to stdout log file
-        stderr_log_file (str): Path to stderr log file
-        domain (str): Domain name
-        command_name (str): Name of the command
-        result_queue (multiprocessing.Queue): Queue for storing results
+    Monitor a specific process and report status changes.
     """
     try:
+        psutil_process = psutil.Process(process.pid)
+        last_status = "running"
+        
+        while psutil_process.is_running() and process.poll() is None:
+            try:
+                # Check process status
+                current_status = "running" if psutil_process.is_running() else "completed"
+                
+                # Report status change
+                if current_status != last_status:
+                    status_queue.put({
+                        'domain': domain,
+                        'command_name': command_name,
+                        'pid': process.pid,
+                        'status': current_status,
+                        'update_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+                    })
+                    
+                last_status = current_status
+                time.sleep(1)
+                
+            except psutil.NoSuchProcess:
+                status_queue.put({
+                    'domain': domain,
+                    'command_name': command_name,
+                    'pid': process.pid,
+                    'status': 'terminated',
+                    'update_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+                })
+                break
+        
+        # Get final return code
+        return_code = process.poll()
+        final_status = 'completed' if return_code == 0 else 'error'
+        
+        status_queue.put({
+            'domain': domain,
+            'command_name': command_name,
+            'pid': process.pid,
+            'status': final_status,
+            'return_code': return_code,
+            'completion_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+        })
+        
+    except Exception as e:
+        status_queue.put({
+            'domain': domain,
+            'command_name': command_name,
+            'pid': process.pid if process else None,
+            'status': 'error',
+            'error': str(e),
+            'update_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+        })
+
+def run_command_with_monitor(cmd: str, stdout_log_file: str, stderr_log_file: str, 
+                           domain: str, command_name: str, status_queue: Queue):
+    """
+    Run a command and monitor its status in real-time.
+    """
+    try:
+        # Ensure log directories exist
+        os.makedirs(os.path.dirname(stdout_log_file), exist_ok=True)
+        os.makedirs(os.path.dirname(stderr_log_file), exist_ok=True)
+        
         with open(stdout_log_file, 'a') as stdout_log, \
              open(stderr_log_file, 'a') as stderr_log:
             
-            # Log command start
-            start_message = f"\n{'-'*50}\nCommand execution started at {time_day_date}\n{'-'*50}\n"
-            stdout_log.write(start_message)
-            
+            # Start the process
             process = subprocess.Popen(
-                cmd, 
-                shell=True, 
-                stdout=stdout_log, 
-                stderr=stderr_log,
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
                 start_new_session=True
             )
             
-            # Wait for process completion
-            return_code = process.wait()
+            # Start monitor thread
+            monitor_thread = threading.Thread(
+                target=process_monitor_worker,
+                args=(process, domain, command_name, status_queue)
+            )
+            monitor_thread.daemon = True
+            monitor_thread.start()
             
-            # Log command completion
-            end_message = f"\n{'-'*50}\nCommand execution completed at {datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')}\n"
-            end_message += f"Return code: {return_code}\n{'-'*50}\n"
-            stdout_log.write(end_message)
+            # Stream output to log files
+            while True:
+                stdout_line = process.stdout.readline()
+                stderr_line = process.stderr.readline()
+                
+                if stdout_line == '' and stderr_line == '' and process.poll() is not None:
+                    break
+                    
+                if stdout_line:
+                    stdout_log.write(stdout_line)
+                    stdout_log.flush()
+                if stderr_line:
+                    stderr_log.write(stderr_line)
+                    stderr_log.flush()
             
-            result_queue.put({
-                'domain': domain,
-                'command_name': command_name,
-                'pid': process.pid,
-                'return_code': return_code,
-                'status': 'completed' if return_code == 0 else 'failed'
-            })
+            # Wait for monitor thread to complete
+            monitor_thread.join(timeout=5)
             
     except Exception as e:
-        logging.error(f"Error executing command for {domain}: {e}")
-        result_queue.put({
+        status_queue.put({
             'domain': domain,
             'command_name': command_name,
             'status': 'error',
-            'error': str(e)
+            'error': str(e),
+            'update_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
         })
 
 class DomainCommandManager:
-    def __init__(self, log_dir: str = 'logs'):
-        """
-        Initialize the DomainCommandManager.
-        
-        Args:
-            data_manager: Instance of GroupManager for data management
-            log_dir (str): Directory for storing logs
-        """
+    def __init__(self):
         self.data_manager = data_manager_obj
-        self.log_dir = log_dir
-        self._setup_logging()
 
-    def _setup_logging(self):
-        """Set up logging configuration."""
-        full_log_dir = os.path.join(self.log_dir, "logs")
-        if not os.path.exists(full_log_dir):
-            os.makedirs(full_log_dir, exist_ok=True)
+    def _process_domain_commands(self, domain: str, group_name: str, commands: List[tuple], 
+                               scan_dir: str, result_queue: Queue) -> List[Dict]:
+        """
+        Process commands for a domain with real-time status updates.
+        """
+        domain_results = []
+        status_queue = Queue()
+        processes = []
         
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s: %(message)s',
-            handlers=[
-                logging.FileHandler(os.path.join(self.log_dir, 'main.log')),
-                logging.StreamHandler()
-            ]
-        )
+        # Create status update handler thread
+        def status_update_handler():
+            while True:
+                try:
+                    status = status_queue.get(timeout=0.1)
+                    # Update command status in data manager
+                    self._update_command_status(status, group_name)
+                    # Forward status to main result queue
+                    result_queue.put(status)
+                    
+                    # Check if all processes are complete
+                    if all(not p.is_alive() for p in processes) and status_queue.empty():
+                        break
+                except Empty:
+                    if all(not p.is_alive() for p in processes):
+                        break
+                    continue
+                except Exception as e:
+                    logging.error(f"Error in status update handler: {e}")
+        
+        # Start status handler thread
+        status_handler = threading.Thread(target=status_update_handler)
+        status_handler.daemon = True
+        status_handler.start()
+        
+        # Launch commands
+        for command_name, cmd, stdout_log_file, stderr_log_file in commands:
+            try:
+                process = Process(
+                    target=run_command_with_monitor,
+                    args=(cmd, stdout_log_file, stderr_log_file, domain, 
+                          command_name, status_queue)
+                )
+                process.start()
+                processes.append(process)
+                
+                # Report initial status
+                status_queue.put({
+                    'domain': domain,
+                    'command_name': command_name,
+                    'pid': process.pid,
+                    'status': 'started',
+                    'start_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+                })
+                
+                domain_results.append({
+                    'command': command_name,
+                    'status': 'started',
+                    'pid': process.pid
+                })
+                
+            except Exception as e:
+                logging.error(f"Error starting process for {command_name} on {domain}: {e}")
+                status_queue.put({
+                    'domain': domain,
+                    'command_name': command_name,
+                    'status': 'error',
+                    'error': str(e),
+                    'update_time': datetime.now().strftime('%H:%M:%S, %A, %d-%m-%Y')
+                })
+        
+        # Wait for all processes with timeout
+        for process in processes:
+            process.join(timeout=300)  # 5-minute timeout
+            if process.is_alive():
+                process.terminate()
+        
+        # Wait for status handler to process remaining updates
+        status_handler.join(timeout=5)
+        
+        return domain_results
+
 
     def initialize_data_structure(self, group_name: str, domain: str, commands: List[tuple]) -> Dict[str, str]:
         """
@@ -148,55 +272,6 @@ class DomainCommandManager:
             logging.error(f"Error initializing data structure: {e}")
             raise
 
-    def _process_domain_commands(self, domain: str, group_name: str, commands: List[tuple], 
-                               scan_dir: str, result_queue: multiprocessing.Queue) -> List[Dict]:
-        """
-        Process commands for a specific domain.
-        
-        Args:
-            domain (str): Domain name
-            group_name (str): Group name
-            commands (List[tuple]): List of command tuples
-            scan_dir (str): Directory for scan results
-            result_queue (multiprocessing.Queue): Queue for results
-            
-        Returns:
-            List[Dict]: List of command execution results
-        """
-        domain_results = []
-        result_dir = f"{scan_dir}/{group_name}/{domain}"
-        os.makedirs(result_dir, exist_ok=True)
-        os.makedirs(f"{result_dir}/logs", exist_ok=True)
-
-        processes = []
-        for command_name, cmd, stdout_log_file, stderr_log_file in commands:
-            try:
-                process = multiprocessing.Process(
-                    target=run_command_wrapper,
-                    args=(cmd, stdout_log_file, stderr_log_file, domain, command_name, result_queue)
-                )
-                process.start()
-                processes.append((process, command_name, cmd))
-                
-                domain_results.append({
-                    'command': command_name,
-                    'status': 'started',
-                    'pid': process.pid
-                })
-                
-            except Exception as e:
-                logging.error(f"Error starting process for {command_name} on {domain}: {e}")
-                domain_results.append({
-                    'command': command_name,
-                    'status': 'error',
-                    'error': str(e)
-                })
-
-        # Wait for all processes to complete
-        for process, command_name, cmd in processes:
-            process.join()
-
-        return domain_results
 
     def command_executor(self, group_name: str, domain_list: List[str], domain: str, 
                         commands: List[tuple], scan_dir: str) -> Dict[str, Any]:
@@ -214,9 +289,10 @@ class DomainCommandManager:
             Dict[str, Any]: Execution results and process details
         """
         try:
-
-            if not os.path.exists(os.path.join(self.log_dir, f"{domain}/subdomains/logs")):
-                os.makedirs(os.path.join(self.log_dir, f"{domain}/subdomains/logs"), exist_ok=True)
+            log_dir = f"{root_Data_Dir}/{group_name}"
+            full_scan_dir = os.path.join(log_dir, domain, scan_dir)
+            if not os.path.exists(full_scan_dir):
+                os.makedirs(full_scan_dir, exist_ok=True)
             # Initialize or update data structure
             initialization = self.initialize_data_structure(group_name, domain, commands)
             group_uuid = initialization["group_uuid"]
@@ -329,6 +405,13 @@ class DomainCommandManager:
         except Exception as e:
             logging.error(f"Error monitoring commands: {e}")
             raise
+
+    def get_all_data(self):
+        return self.data_manager._read_file()
+        
+
+    def _get_all_group_name_with_uuid(self):
+        return self.data_manager.list_groups()
 
     def stop_processes(self, group_name: Optional[str] = None, domain_name: Optional[str] = None) -> Dict[str, Any]:
         """

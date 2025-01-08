@@ -1,55 +1,67 @@
-def are_all_commands_completed(data):
-    """
-    Check if all commands in the data have status 'completed'.
+import os
+import sys
+import subprocess
+from datetime import datetime
 
-    :param data: Dictionary containing group_name, domains, and commands
-    :return: True if all commands have 'completed' status, False otherwise
-    """
-    # Loop through all domains
-    for domain_id, domain_data in data.get('domains', {}).items():
-        commands = domain_data.get('commands', {})
-        # Loop through all commands
-        for command_name, command_data in commands.items():
-            if command_data.get('status') != 'completed':
-                return False  # Return False immediately if any status is not 'completed'
-    return True  # Return True if all commands are 'completed'
+def main():
+    url_file = sys.argv[1]
+    link = sys.argv[2]
 
-# Example Usage
-data = {
-    'group_name': 'nt',
-    'domains': {
-        '99648e46-2225-41eb-b72d-2e9f6a55bcd3': {
-            'domain_name': 'thecyberboy.com',
-            'commands': {
-                'assetfinder': {
-                    'command_name': 'assetfinder',
-                    'pid': 169839,
-                    'command': 'echo thecyberboy.com | assetfinder',
-                    'status': 'completed',
-                    'start_time': '18:39:52, Wednesday, 18-12-2024',
-                    'return_code': 0
-                },
-                'subfinder': {
-                    'command_name': 'subfinder',
-                    'pid': 169836,
-                    'command': 'echo thecyberboy.com | subfinder',
-                    'status': 'completed',
-                    'start_time': '18:39:52, Wednesday, 18-12-2024',
-                    'return_code': 0
-                },
-                'subdominator': {
-                    'command_name': 'subdominator',
-                    'pid': 169859,
-                    'command': 'subdominator -d thecyberboy.com',
-                    'status': 'completed',
-                    'start_time': '18:39:52, Wednesday, 18-12-2024',
-                    'return_code': 0
-                }
-            }
-        }
-    }
-}
+    open_redirect_results = "openRedirects.txt"
+    ssrf_results = "ssrfUrls.txt"
 
-# Test the function
-result = are_all_commands_completed(data)
-print("All commands completed:", result)  # Output: True
+    time_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # For getting first 20 characters of `link`
+    first_20 = link[:20]
+    counter = 1
+    temp_file = "tempResults.txt"
+    try:
+        with open(url_file, "r") as url_results:
+            for line in url_results:
+                line = line.strip()
+                lc = f"{link}?no={counter}"
+                # Prepare query and filter results
+                qs = subprocess.run(
+                    ["qsreplace", "-a"],
+                    input=line.encode(),
+                    stdout=subprocess.PIPE
+                ).stdout.decode()
+                qs = subprocess.run(
+                    ["qsreplace", lc],
+                    input=qs.encode(),
+                    stdout=subprocess.PIPE
+                ).stdout.decode()
+                qs_lines = list(filter(None, qs.splitlines()))
+                with open(ssrf_results, "a") as ssrf_file:
+                    ssrf_file.write("\n".join(qs_lines) + "\n")
+                for qs_line in qs_lines:
+                    headers = subprocess.run(
+                        ["curl", "-I", "-L", qs_line, "-k"],
+                        stderr=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE
+                    ).stdout.decode()
+                    location_header = next((line for line in headers.splitlines() if "location:" in line.lower()), None)
+                    if location_header:
+                        url = location_header.split(" ", 1)[1].strip()
+                        with open(temp_file, "a") as temp:
+                            temp.write(f"{qs_line} ---> {url}\n")
+                counter += 1
+        # Filtering out proper Open Redirects
+        with open(temp_file, "r") as temp:
+            with open(open_redirect_results, "w") as open_redirects:
+                for line in temp:
+                    if f"---> {first_20}" in line:
+                        open_redirects.write(line)
+        # Check if open redirects were found
+        if os.path.getsize(open_redirect_results) > 0:
+            count = sum(1 for _ in open(open_redirect_results))
+            print(f"\033[32mOpen redirects found: {count}\033[0m")
+        else:
+            os.remove(open_redirect_results)
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+    # Go back to base directory
+    os.chdir("../../")
+if __name__ == "__main__":
+    main()

@@ -6,20 +6,20 @@ from app.services.pyscripts.subdomains import func_subdomains_ps_only
 import os
 # from app.config.celery_config import celery
 
-def func_js(group_name, domain_list):
-    result_dir = f"{target_dir}js"
-    os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
-    print("Executing: func_js")
+# def func_js(group_name, domain_list):
+#     result_dir = f"{target_dir}js"
+#     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
+#     print("Executing: func_js")
 
-def func_nuclei(group_name, domain_list):
-    result_dir = f"{target_dir}nuclei"
-    os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
-    print("Executing: func_nuclei")
+# def func_nuclei(group_name, domain_list):
+#     result_dir = f"{target_dir}nuclei"
+#     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
+#     print("Executing: func_nuclei")
 
-def func_nmap(group_name, domain_list):
-    result_dir = f"{target_dir}nmap"
-    os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
-    print("Executing: func_nmap")
+# def func_nmap(group_name, domain_list):
+#     result_dir = f"{target_dir}nmap"
+#     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
+#     print("Executing: func_nmap")
 
 # @celery.task
 def start_scan(group_name, domain_list, scan_list):
@@ -38,15 +38,16 @@ def start_scan(group_name, domain_list, scan_list):
     
     # Define the actions and their respective functions
     actions = {
-        "subdomains_both": func_subdomains_both,
+        "subdomainBoth": func_subdomains_both,
         "subdomainPassive": func_subdomains_ps_only,
+        "urlsBoth": func_urls_both,
         # "subdomains_ac_only": func_subdomains_ac_only,
-        # "urls_both": func_urls_both,
         # "urls_ps_only": func_urls_ps_only,
         # "urls_ac_only": func_urls_ac_only,
-        "js": func_js,
-        "nuclei": func_nuclei,
-        "nmap": func_nmap,
+        # "xss": func_xss,
+        # "js": func_js,
+        # "nuclei": func_nuclei,
+        # "nmap": func_nmap,
     }
     
     # Enforced order of execution for related scans

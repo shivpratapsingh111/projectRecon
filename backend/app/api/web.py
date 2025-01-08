@@ -4,67 +4,53 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTa
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Union, Dict
 from pydantic import BaseModel
-from app.utils.validators import validate_tests
 import uvicorn, asyncio, time
 from fastapi import APIRouter
 from app.services.manage_scan import start_scan
-from celery.result import AsyncResult
-# from app.services.pyscripts.subdomains import monitor_command
 from app.interface.process_manager import DomainCommandManager
-# from app.interface.global_manager import initialize_manager, get_manager, stop_group_processes
+from fastapi import WebSocket, WebSocketDisconnect
+import json
 
 router = APIRouter()
+manager = DomainCommandManager()
 
 @router.get("/web", tags=["start-operation-web"])
 async def web():
     return {"message": "Need input"}
 
-@router.post("/web/list", tags=["Domain list input"])
-async def get_domain_list(
-    background_tasks: BackgroundTasks,
-    domain_list: str = Form(...),
-    groupName: str = Form(...),
-    scan_list: str = Form(...)
-):
-
-    start_scan(groupName, domain_list, scan_list)
-    
-    return {"Message": "Scan started successfully", "Group Name": groupName,"Domains": domain_list, "Scans Selected": scan_list}
-
-
-
-@router.post("/web/file", tags=["Domain list input"])
-async def get_domain_file(
-    file: UploadFile = File(...),  # Required file upload
-    groupName: str = Form(...),  # Required text input
-    scan_list: List[str] = Form(...)  # Optional additional field
-):
-    domain_list: List[str] = []
-    try:
-        contents = await file.read()
-        domain_list = contents.decode("utf-8").splitlines()
-    except Exception as e:
-        return {"error": f"Failed to read file: {str(e)}"}
-    finally:
-        await file.close()  # Ensure the file is closed
-    
-    print(groupName, domain_list, scan_list)
-    # asyncio.create_task(asyncio.to_thread(start_scan, groupName, domain_list, scan_list))
-    time.sleep(2)
-    # manager = DomainCommandManager(log_dir=f"{root_Data_Dir}/{groupName}")
-    # result = manager.command_monitor(groupName)
-    return {"Group name": groupName,"Domains": domain_list, "Scans Selected": scan_list, "Status": "running"} 
-    # return result
- 
-
 @router.get("/get-status/{groupName}")
 async def get_status1(groupName: str):
     try:
-        manager = DomainCommandManager(log_dir=f"{root_Data_Dir}/{groupName}")
         result = manager.command_monitor(groupName)
         return {f"status of {groupName}": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+# @router.get("/get-all")
+# async def get_status1():
+#     try:
+#         result = manager.get_all_data()
+#         return result
+#     except ValueError as e:
+#         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.websocket("/ws/get-all")
+async def websocket_get_all(websocket: WebSocket):
+    try:
+        await websocket.accept()  # Accept the WebSocket connection
+        while True:
+            result = manager.get_all_data()  # Get your data
+            # Convert result to JSON string before sending
+            await websocket.send_text(json.dumps(result))  # Send the result over the WebSocket
+            await asyncio.sleep(1)  # Add a small delay between updates
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        if not websocket.client_state.DISCONNECTED:
+            await websocket.close()
+
 
 
 @router.post("/process-scan")
@@ -72,28 +58,36 @@ async def process_scan(
     domain: Union[str, None] = Form(None),
     groupName: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
-    subdomainPassive: Union[str, None] = Form(None),
-    subdomainBoth: Union[str, None] = Form(None),
-    urlEnum: Union[str, None] = Form(None),
+    scanOptions: Union[str, None] = Form(None),  # JSON string of selected scan options
 ):
     """
     Processes the request to extract scan names and domains.
     - `domain`: A comma-separated list of domains from a text input.
     - `file`: A file containing one domain per line.
-    - Scan parameters are passed as boolean-like strings ("true").
+    - `scanOptions`: A JSON string containing selected scan options.
     """
 
-    # Initialize the scan names and domains list
-    scan_names = []
-    domains = []
+    # Parse scan options
+    try:
+        if scanOptions:
+            scan_names = json.loads(scanOptions)
+        else:
+            scan_names = []
+    except json.JSONDecodeError:
+        return JSONResponse(
+            content={"error": "Invalid format for scanOptions."},
+            status_code=400,
+        )
 
-    # Collect scan names if the parameters are "true"
-    if subdomainPassive == "true":
-        scan_names.append("subdomainPassive")
-    if subdomainBoth == "true":
-        scan_names.append("subdomainBoth")
-    if urlEnum == "true":
-        scan_names.append("urlEnum")
+    # Validate at least one scan option is selected
+    if not scan_names:
+        return JSONResponse(
+            content={"error": "No scan options provided."},
+            status_code=400,
+        )
+
+    # Initialize the domains list
+    domains = []
 
     # Process domains from the "domain" input field
     if domain:
@@ -111,11 +105,11 @@ async def process_scan(
             status_code=400,
         )
 
+    # Print for debugging purposes
     print(groupName, domains, scan_names)
 
+    # Create async task for scanning
     asyncio.create_task(asyncio.to_thread(start_scan, groupName, domains, scan_names))
-    manager = DomainCommandManager(log_dir=f"{root_Data_Dir}/{groupName}")
-    # result = manager.command_monitor(groupName)
 
     return {
         "groupName": groupName,
@@ -125,10 +119,11 @@ async def process_scan(
 
 
 
+
 @router.get("/stop-all/{groupName}")
 async def stop_all(groupName: str):
     try:
-        manager = DomainCommandManager(log_dir=f"{root_Data_Dir}/{groupName}")
+        # log_dir=f"{root_Data_Dir}/{groupName}"
         result = manager.stop_processes(groupName)
         return {f"status of {groupName}": result}
     except ValueError as e:

@@ -3,7 +3,6 @@ from app.config.config  import *
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
-from app.utils.validators import validate_tests
 import uvicorn
 from fastapi import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +15,8 @@ router = APIRouter()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,  # Allows cookies to be sent
-    allow_methods=["*"],  # Allows all HTTP methods
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
 )
 
