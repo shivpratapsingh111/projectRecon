@@ -26,15 +26,6 @@ async def get_status1(groupName: str):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-# @router.get("/get-all")
-# async def get_status1():
-#     try:
-#         result = manager.get_all_data()
-#         return result
-#     except ValueError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-
-
 @router.websocket("/ws/get-all")
 async def websocket_get_all(websocket: WebSocket):
     try:
@@ -50,7 +41,6 @@ async def websocket_get_all(websocket: WebSocket):
         print(f"Error: {str(e)}")
         if not websocket.client_state.DISCONNECTED:
             await websocket.close()
-
 
 
 @router.post("/process-scan")
@@ -116,9 +106,6 @@ async def process_scan(
         "scanNames": scan_names,
         "domains": domains,
     }
-
-
-
 
 @router.get("/stop-all/{groupName}")
 async def stop_all(groupName: str):

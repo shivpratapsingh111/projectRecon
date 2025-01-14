@@ -4,8 +4,7 @@ import psycopg2
 from psycopg2.extras import Json
 import logging
 from datetime import datetime
-from app.testDB.db_queries import QueryManager
-# from db_queries import QueryManager
+from db_queries import QueryManager
 
 
 class DatabaseManager:
@@ -40,13 +39,9 @@ class DatabaseManager:
             conn.autocommit = True  # Required for database creation
             cur = conn.cursor()
             
+            # Check if database exists
             cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (target_db,))
-            db_exists =  cur.fetchone()
-            
-            if db_exists:
-                self.logger.info(f"DB already exists {target_db} - Proceeding...")
-                
-            if not db_exists:
+            if not cur.fetchone():
                 self.logger.info(f"Creating database {target_db}")
                 # Close existing connections to avoid "database is being accessed by other users"
                 cur.execute(f"""
@@ -55,6 +50,7 @@ class DatabaseManager:
                     WHERE pg_stat_activity.datname = %s
                     AND pid <> pg_backend_pid()
                 """, (target_db,))
+                # Create database
                 cur.execute(f"CREATE DATABASE {target_db}")
             
         except Exception as e:
@@ -64,21 +60,16 @@ class DatabaseManager:
             if conn:
                 conn.close()
         
+        # Now connect to our database and create tables
         try:
             conn = psycopg2.connect(**self.db_config)
-            conn.autocommit = True        
             cur = conn.cursor()
             
-            # Set extension for uuid_generate_v4()
-            cur.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
-            
+            # Create tables
             self.logger.info("Initializing database tables")
-            # cur.execute(QueryManager.CREATE_ENDPOINTS_TABLE)
-            # cur.execute(QueryManager.CREATE_CHANGES_TABLE)
+            cur.execute(QueryManager.CREATE_ENDPOINTS_TABLE)
+            cur.execute(QueryManager.CREATE_CHANGES_TABLE)
             
-            # Create all tables from a list
-            for QueryManager.tables in QueryManager.CREATE_TABLE_LIST:
-                cur.execute(QueryManager.tables)
             conn.commit()
             self.logger.info("Database initialization completed successfully")
             
@@ -93,27 +84,27 @@ class DatabaseManager:
             if conn:
                 conn.close()
 
-    def execute_query(self, query: str, params: Tuple) -> Optional[Any]:
+    def execute_query(self, query: str, params: Tuple = None) -> Optional[Any]:
         """Execute a query and return results if any"""
         conn = None
         cur = None
         try:
-            conn = psycopg2.connect(**self.db_config)
-            conn.autocommit = True
-            cur = conn.cursor()
-            cur.execute(query, params)
-            result = None
+            try: 
+                conn = psycopg2.connect(**self.db_config)
+                cur = conn.cursor()
+                self.logger.info(f"Query: {query}, Params: {params}")
+                cur.execute(query, params)
+            except Exception as e:
+                self.logger.debug(f"Error in fetch: {str(e)}\nQuery: {query}\nParams: {params}")
 
-            if (query.strip().upper().startswith('SELECT')):
+            if (query.strip().upper().startswith('SELECT')) or ("RETURNING id" in query):
                 result = cur.fetchall()
-            elif ("RETURNING id" in query):
-                result = cur.fetchone()
             else:
                 result = None
-
+                
             conn.commit()
             return result
-
+            
         except Exception as e:
             if conn:
                 conn.rollback()
@@ -131,7 +122,6 @@ class DatabaseManager:
         cur = None
         try:
             conn = psycopg2.connect(**self.db_config)
-            conn.autocommit = True
             cur = conn.cursor()
             cur.executemany(query, params_list)
             conn.commit()

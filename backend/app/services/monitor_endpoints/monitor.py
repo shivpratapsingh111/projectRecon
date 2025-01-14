@@ -1,46 +1,42 @@
 # monitor.py
-from db_manager import DatabaseManager
-from db_operations import DatabaseOperations
-import requests
-import hashlib
-import os
-import time
-from datetime import datetime
-import psycopg2
-from psycopg2.extras import Json
 import mimetypes
+import aiohttp
+import asyncio
+import hashlib
+import hashlib
+import random
+import pytz
+import ssl
+import os
+
+from urllib.parse import urlparse
+from datetime import datetime
+from psycopg2.extras import Json
 from urllib.parse import urlparse
 from asyncio import Queue
 from aiohttp import ClientSession, ClientTimeout
-import asyncio
-import aiohttp
-
-
 from datetime import datetime
-import pytz
-
-import logging
 from pathlib import Path
-import os
-
 from datetime import datetime
 from typing import Dict, Optional, List, Tuple
-import hashlib
 from dataclasses import dataclass
 from aiohttp.client_exceptions import ClientConnectionError
+from app.services.monitor_endpoints.logger import setup_logger
 
-from logger import setup_logger
+from app.db.db_manager import DatabaseManager
+from app.db.db_operations import DatabaseOperations
 
-root_Data_Dir = "~/projectRecon-Data/"
-root_Data_Dir = os.path.expanduser(root_Data_Dir).rstrip('/') # Getting Absolute path
-filepath = None
 
-# Constants
-MAX_CONCURRENT_REQUESTS = 10
-MAX_RETRIES = 3
-RETRY_BACKOFF = 2  # Exponential backoff (seconds)
-TIMEOUT = 10  # Timeout in seconds for each request
-
+# ------------------------------------ Constants ---------------------------------------#|
+ROOT_DATA_DIR = "~/projectRecon-Data/"                                                  #|
+ROOT_DATA_DIR = os.path.expanduser(ROOT_DATA_DIR).rstrip('/') # Getting Absolute path   #|
+MAX_CONCURRENT_REQUESTS = 10                                                            #|
+MAX_RETRIES = 3                                                                         #|
+RETRY_BACKOFF = 2                                                                       #|
+TIMEOUT = 10                                                                            #|
+                                                                                        #|
+filepath = None                                                                         #|  
+# ------------------------------------ Constants ---------------------------------------#|
 
 @dataclass
 class ChangeMetadata:
@@ -74,12 +70,12 @@ class EndpointChangeDetector:
             curr_value = current_data.get(new_field)   # Get the current "new" value
             curr_value_old = current_data.get(old_field)   # Get the current "old" value
             
-            # print("===DEBUG===")
-            # print(f"prev_value: {prev_value}")
-            # print(f"prev_value [old]: {prev_value_old}")
-            # print(f"curr_value: {curr_value}")
-            # print(f"curr_value [old]: {curr_value_old}")
-            # print("============")
+            logger.debug(f"===[DEBUG] - [{field}]===")
+            logger.debug(f"prev_value [{new_field}] [new]: {prev_value}")
+            logger.debug(f"prev_value [{old_field}] [old]: {prev_value_old}")
+            logger.debug(f"curr_value [{new_field}] [new]: {curr_value}")
+            logger.debug(f"curr_value [{old_field}] [old]: {curr_value_old}")
+            logger.debug("==========================")
             
             if self._is_change(field, prev_value, curr_value):
                 changes.append(ChangeMetadata(
@@ -89,19 +85,21 @@ class EndpointChangeDetector:
                 ))
                 changed_fields.append(field)
             
-            # print("===DEBUG===")
-            # print(f"Current before update: \n{current_data}")
-            # Update the old value in current_data
-            current_data[old_field] = prev_value
+            logger.debug(f"===[DEBUG] - [{field}]===")
+            logger.debug(f"Current Data before update: \n{current_data}")
+
+            current_data[old_field] = prev_value # Update the old value in current_data
             current_data['change_detected_at'] = datetime.now()
-            # print(f"Current after update: \n{current_data}")
+
+            logger.debug(f"Current Data after update: \n{current_data}")
+            logger.debug("==========================")
         
         if changes:
             self._update_database(previous_data['id'], current_data, changes)
             return True, changed_fields
         else:
             self.db_ops.update_operations().update_endpoint_timestamp(previous_data['id'])
-            logger.debug("Updated timestamp - No Changes detected")
+            logger.debug("Updated timestamp - [NO CHANGES DETECTED]")
         
         return False, []
     
@@ -110,9 +108,7 @@ class EndpointChangeDetector:
         Determines if a change is significant enough to warrant an update.
         Implements specific logic for different types of fields.
         """
-        if old_value is None or new_value is None:
-            return True
-            
+
         if field == 'status_code':
             return old_value != new_value
                             
@@ -135,32 +131,29 @@ class EndpointChangeDetector:
 
             
             # Log the changes
-            change_summary = "\n".join([
-                f"Field: {change.field_name}, Old: {change.old_value}, New: {change.new_value}"
+            change_summary = ", ".join([
+                f"{change.field_name}"
                 for change in changes
             ])
             
             # Perform the update
             self.db_ops.update_operations().update_endpoint_data(endpoint_id, update_data)
-            logger.info(f"Endpoint [{endpoint_id}]-[{update_data['url']}] updated on DB:\nChanges: [{change_summary}]")
+            logger.info(f"[CHANGES DETECTED] [{update_data['url']}] [{change_summary}]")
                             
         except Exception as e:
             logger.exception(f"Failed to update database for endpoint {endpoint_id}: {str(e)}")
             raise
 
 class EndpointMonitor:
-    def __init__(self, db_config: dict, urls_file: str, check_interval: int, response_dir: str):
+    def __init__(self, db_config: dict, urls_file: str, check_interval: int):
         self.urls_file = urls_file
         self.check_interval = check_interval
-        self.response_dir = response_dir
         
         # Initialize database operations
         db_manager = DatabaseManager(db_config)
         self.db_ops = DatabaseOperations(db_manager)
         
         self.change_detector = EndpointChangeDetector(self.db_ops)
-
-        os.makedirs(response_dir, exist_ok=True)
 
     async def sanitize_url(self, url):
         parsed_url = urlparse(url)
@@ -169,10 +162,14 @@ class EndpointMonitor:
 
     # Retry logic with exponential backoff
     async def make_request(self, session: ClientSession, url: str, retries: int = MAX_RETRIES):
+        logger.debug(f"In [make_request] function for [{url}]")
         attempt = 0
         while attempt < retries:
+            logger.debug(f"In [make_request]-[while loop] for [{url}]")
             try:
+                logger.debug(f"In [make_request]-[while loop]-[try block] [sending request] for [{url}]")
                 response = await session.get(url, timeout=TIMEOUT)
+                logger.debug(f"Got response for [{url}]")
                 return response
             except (ClientTimeout, ClientConnectionError) as e:
                 attempt += 1
@@ -187,9 +184,9 @@ class EndpointMonitor:
 
 
     # Worker to process URLs
-    async def worker(self, worker_id: int, queue: Queue, session: ClientSession, result_queue: Queue):
+    async def worker(self, worker_id: int, url_queue: Queue, session: ClientSession, result_queue: Queue):
         while True:
-            url = await queue.get()
+            url = await url_queue.get()
             if url is None:  # Sentinel value to signal worker shutdown
                 break
 
@@ -204,30 +201,30 @@ class EndpointMonitor:
             else:
                 await result_queue.put((url, "Failed", None))
 
-            queue.task_done()  # Mark task as done
+            url_queue.task_done()  # Mark task as done
 
     # Result processor to handle the results from workers
-    async def process_results(self, result_queue: Queue):
+    async def process_results(self, result_queue: Queue, scan_name):
         while True:
             result = await result_queue.get()
-            logger.debug(f"Got new result from queue")
+            logger.debug(f"Got new result from result_queue")
             
             # If the result is None, skip processing and handle it accordingly
             if result is None:
                 result_queue.task_done()  # Mark the task as done even if it's None
-                logger.warning("Received None from result_queue, Finishing.")
+                logger.debug("Received None from result_queue, Finishing.")
                 break
                         
             # Unpack the result tuple (url, status, data)
             url, response = result
 
-            await self.check_endpoint(url, response)
+            await self.check_endpoint(url, response, scan_name)
                         
             result_queue.task_done()
             logger.debug("All task marked as completed")
                         
 
-    async def check_endpoint(self, url, response):
+    async def check_endpoint(self, url, response, scan_name):
         """Check a single endpoint and record changes"""
         global filepath
         try:
@@ -242,7 +239,7 @@ class EndpointMonitor:
             
             content_type = response_headers.get('Content-Type', '')
             ext = mimetypes.guess_extension(content_type.split(";")[0]) or ".bin"  # Guess file extension
-            result_dir = f"{root_Data_Dir}/monitoring"
+            result_dir = f"{ROOT_DATA_DIR}/monitoring/{scan_name}/responses"
             os.makedirs(result_dir, exist_ok=True)
             logger.debug(f"Made monitoring dir {result_dir}")
             sanitezed_filename = await self.sanitize_url(url)
@@ -351,7 +348,23 @@ class EndpointMonitor:
                                     logger.debug(f"Response Body saved as binary file [{filepath}]")
 
                 else:
-                    logger.info(f"Same body hash, No changes in response body for [{url}]")
+                    logger.info(f"[NO CHANGES DETECTED] - Same body hash for [{url}]")
+                    if not os.path.exists(current_data['new_body_file_path']):
+                        logger.warning(f"Old responses not detected, Starting fresh...")
+                        
+                        filepath = f"{result_dir}/{filename}" # use default file name
+                        current_data['new_body_file_path'] = filepath # update filename for new_body_filepath
+                        
+                        if "text" in content_type or "json" in content_type:
+                            with open(filepath, "w", encoding="utf-8") as file:
+                                file.write(response_body)
+                                logger.debug(f"Response Body saved as text file [{filepath}]")
+                        else:
+                            with open(filepath, "wb") as file:
+                                for chunk in response.iter_content(chunk_size=8192):
+                                    file.write(chunk)  # Save as binary
+                                    logger.debug(f"Response Body saved as binary file [{filepath}]")
+
             else:
                 logger.debug(f"Previous Data is None, New Endpoint")
                 
@@ -433,11 +446,8 @@ class EndpointMonitor:
                     # Compare and record changes if needed
                     changes = self._detect_changes(previous_data, current_data)
                     if changes:
-                        logger.info(f"Changes detected for {url}")
                         self.db_ops.update_operations().update_endpoint_data(previous_data['id'], changes)
-                        logger.info(f"Updated in DB")
-                    else:
-                        logger.info(f"No Changes detected for {url}")
+                        logger.debug(f"Changes Updated in DB")
                         
                 else:
                     # First time seeing this endpoint
@@ -458,51 +468,87 @@ class EndpointMonitor:
         )
         return current_data if changes_detected else {}
 
-    async def run(self):
-        """Main monitoring loop"""
-        logger.info(f"Starting endpoint monitoring every {self.check_interval} seconds")
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    async def generate_random_headers(self):
+        USER_AGENTS = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0",
+            "Mozilla/5.0 (Linux; Android 9; Pixel 3 XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36"
+        ]
+        headers = {
+            'User-Agent': random.choice(USER_AGENTS),
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive'
         }
-        queue = asyncio.Queue()
+        return headers
+
+
+    async def is_valid_http_url(self, url: str) -> bool:
+        parsed_url = urlparse(url)
+        return parsed_url.scheme in ["http", "https"] and bool(parsed_url.netloc)
+
+
+    async def run(self, urls, scan_name):
+        """Main monitoring loop"""
+        headers = await self.generate_random_headers()
+        
+        logger.debug(f"[Headers]: {headers}")
+        
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        url_queue = asyncio.Queue()
         result_queue = asyncio.Queue()
         workers = []
-        with open(self.urls_file, 'r') as f:
-            logger.debug(f"Opened [{self.urls_file}] to read urls")
-            urls = [line.strip() for line in f if line.strip()]
+        # with open(self.urls_file, 'r') as f:
+        #     logger.debug(f"Opened [{self.urls_file}] to read urls")
+        #     urls = [line.strip() for line in f if line.strip()]
         for url in urls:
-            await queue.put(url)
-            logger.debug(f"All urls pushed to Queue [Count: {queue.qsize()}]")
+            if await self.is_valid_http_url(url):
+                await url_queue.put(url)
+            else:
+                logger.warning(f"[Not a URL] [{url}]")
+        url_queue_count = url_queue.qsize()
+        logger.info(f"Endpoints [Count: {url_queue_count}]")
             
         try:
-            async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with aiohttp.ClientSession(headers=headers, connector=connector) as session:
                 # Start workers
                 for worker_id in range(MAX_CONCURRENT_REQUESTS):
-                    workers.append(asyncio.create_task(self.worker(worker_id, queue, session, result_queue)))
+                    workers.append(asyncio.create_task(self.worker(worker_id, url_queue, session, result_queue)))
                     
-                result_processor = asyncio.create_task(self.process_results(result_queue))
-                await queue.join()  # Wait until all URLs are processed
-                logger.info(f"All Endpoints have been processed [Count: {queue.qsize()}]")
-                # Stop workers gracefully by putting None in the queue
+                result_processor = asyncio.create_task(self.process_results(result_queue, scan_name))
+                await url_queue.join()
+                
+                # Stop workers gracefully by putting None in the url_queue
                 for _ in range(MAX_CONCURRENT_REQUESTS):
-                    await queue.put(None)
+                    await url_queue.put(None)
                 # Wait for all workers to finish
                 await asyncio.gather(*workers)
                 # Stop result processor gracefully
                 await result_queue.put(None)
                 await result_processor
-                logger.info(f"All tasks completed [Count: {result_queue.qsize()}]")
+                
+                logger.info(f"Completed [Count: {url_queue_count}]")
         except Exception as e:
-            logger.exception(f"Failed to pass queue to process_urls function [{str(e)}]")
+            logger.exception(f"Failed to pass url_queue to process_urls function [{str(e)}]")
             
-    async def monitor_loop(self):
+    async def monitor_loop(self, urls, scan_name):
         """Monitor loop that keeps running every check_interval seconds"""
         while True:
-            await self.run()  # Run the monitoring task
-            logger.info(f"Next run in {self.check_interval} seconds")
+            print("\n")
+            logger.info("=====[START]=====")
+            await self.run(urls, scan_name)  # Run the monitoring task
+            logger.info("=====[END]=====")
+            print("\n")
+            logger.info(f"Next scan in {self.check_interval} seconds")
             await asyncio.sleep(self.check_interval)  # Wait for the specified interval
 
-def main():
+async def monitor_endpoints(urls, scan_name):
     global logger
     db_config = {
         'dbname': 'test_monitor',
@@ -510,21 +556,28 @@ def main():
         'password': 'postgres',
         'host': 'localhost'
     }
-    
+    log_dir = f"{ROOT_DATA_DIR}/monitoring/logs"
+    os.makedirs(log_dir, exist_ok=True)
     # logger = setup_logger("endpoint_monitor", enable_debug=True)
-    logger = setup_logger("endpoint_monitor")
+    logger = setup_logger("endpoint_monitor", enable_debug=False)
     
     monitor = EndpointMonitor(
         db_config=db_config,
         urls_file='endpoints.txt',
         check_interval=10,  # run every 10 seconds
-        response_dir='responses'
     )
-    
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(monitor.monitor_loop())  # Run monitor loop indefinitely
 
-if __name__ == "__main__":
-    main()
+    logger.debug(f"Endpoints Provided [{urls}]")
+    await monitor.monitor_loop(urls, scan_name)
 
-        
+    # try:
+    #     loop = asyncio.get_running_loop()  # Get the running event loop
+    # except RuntimeError:
+    #     loop = asyncio.new_event_loop()  # Create a new event loop if none exists
+    #     asyncio.set_event_loop(loop)
+
+    # # Schedule the coroutine asynchronously
+    # loop.create_task(monitor.monitor_loop(urls, scan_name))
+
+# urls = ['http://0.0.0.0:8080', 'https://www.google.com']
+# asyncio.run(monitor_endpoints(urls, "Test-Scan"))

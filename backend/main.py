@@ -1,4 +1,4 @@
-from app.api import file_get_all, web
+from app.api import file_get_all, web, report, monitor_endpoints
 from app.config.config  import *
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from typing import List, Optional
@@ -31,8 +31,8 @@ async def root():
 
 
 app.include_router(web.router, prefix="/scan", tags=["Scanning"])
-
-
+app.include_router(report.router, tags=["Report"])
+app.include_router(monitor_endpoints.router, prefix="/monitor", tags=["Endpoint Monitor"])
 
 
 
