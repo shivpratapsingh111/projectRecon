@@ -1,25 +1,20 @@
 # db_operations.py
-from typing import Dict, List, Optional, Any, Tuple
+
+# ===[Imports]===
+from typing import Dict, List
 from psycopg2 import extensions
-from psycopg2.extras import Json
-import logging
-from datetime import datetime
-import psycopg2
-from psycopg2.extras import Json
 
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.db.db_queries import QueryManager
-
+# ===[Local Imports]===
+from app.services.mail_reports.db.db_queries import QueryManager
+from app.services.mail_reports.db.db_manager import DatabaseManager
 from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='add', enable_debug = False)
-from app.config.db_config import db_config
+logger = setup_logger(__name__, log_file_path='mail_reports', enable_debug = False)
 
-db_manager = DatabaseManager(db_config)
 
 class DatabaseOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
-        
+
     def insert_operations(self):
         return EndpointInsertOperations(self.db)
 
@@ -36,35 +31,6 @@ class DatabaseOperations:
 class EndpointInsertOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
-
-    # --- Endpoint Monitor ---
-    def insert_endpoint(self, endpoint_data: Dict):
-        """Record a change in endpoint response"""
-        try:
-            params = (
-                endpoint_data['program_id'],
-                endpoint_data['target_id'],
-                endpoint_data['scan_name'],
-                endpoint_data['scan_interval'],
-                endpoint_data['status'],
-                endpoint_data['url'],
-                endpoint_data['old_status_code'],
-                endpoint_data['new_status_code'],
-                endpoint_data['old_response_size'],
-                endpoint_data['new_response_size'],
-                endpoint_data['old_body_hash'],
-                endpoint_data['new_body_hash'],
-                endpoint_data['old_body_file_path'],
-                endpoint_data['new_body_file_path'],
-                endpoint_data['change_detected_at'],
-                endpoint_data['need_review']
-            )
-            self.db.execute_query(QueryManager.INSERT_ENDPOINT, params)
-            logger.info(f"Endpoint Data inserted successfully - [{str(endpoint_data['url'])}]")
-            
-        except Exception as e:
-            logger.exception(f"Failed to insert endpoint data [{str(endpoint_data['url'])}]: {str(e)}")
-            raise
 
     # --- Report ---
     def insert_program(self, program_data: Dict):
@@ -126,34 +92,6 @@ class EndpointUpdateOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
 
-    # --- Endpoint Monitor ---
-    def update_endpoint_data(self, id: int, endpoint_data: Dict):
-        """Update endpoint data"""
-        try:
-            params = (
-                endpoint_data['old_status_code'],
-                endpoint_data['new_status_code'],
-                endpoint_data['old_response_size'],
-                endpoint_data['new_response_size'],
-                endpoint_data['old_body_hash'],
-                endpoint_data['new_body_hash'],
-                endpoint_data['old_body_file_path'],
-                endpoint_data['new_body_file_path'],
-                endpoint_data['change_detected_at'],
-                id
-            )
-            # logger.info(f"Query: {QueryManager.INSERT_ENDPOINT}, Parameters: {params}")
-            self.db.execute_query(QueryManager.UPDATE_ENDPOINT_DATA, params)
-        except Exception as e:
-            logger.exception(f"Failed to update endpoint {id}: {str(e)}")
-            raise
-    def update_endpoint_timestamp(self, id: int):
-        try:
-            self.db.execute_query(QueryManager.UPDATE_ENDPOINT_TIMESTAMP, (id,))
-        except Exception as e:
-            logger.exception(f"Failed to update timestamp for endpoint {id}: {str(e)}")
-            raise
-
     # --- Report ---
     def update_mobile_target_vuln(self, id, vulnerability_reported: Dict):
         """Update mobile target vulnerability"""
@@ -172,78 +110,11 @@ class EndpointDeleteOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
 
-    # --- Endpoint Monitor ---
-    def delete_endpoint(self, id: int):
-        """Delete an endpoint and its associated changes"""
-        try:
-            # First delete associated changes due to foreign key constraint
-            self.db.execute_query(QueryManager.DELETE_ENDPOINT, (id,))
-        except Exception as e:
-            logger.exception(f"Failed to delete endpoint {id}: {str(e)}")
-            raise
 
 class EndpointQueryOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
 
-    # --- Endpoint Monitor ---
-    def get_endpoint_data_by_url(self, url: str) -> Optional[Dict]:
-        """Get current endpoint data from url"""
-        try:
-            result = self.db.execute_query(QueryManager.SELECT_ENDPOINT_DATA_BY_URL, (url,))
-            if result:
-                row = result[0]
-                return {
-                    'id': row[0],
-                    'url': row[1],
-                    'old_status_code': row[2],
-                    'new_status_code': row[3],
-                    'old_response_size': row[4],
-                    'new_response_size': row[5],
-                    'old_body_hash': row[6],
-                    'new_body_hash': row[7],
-                    'old_body_file_path': row[8],
-                    'new_body_file_path': row[9],
-                    'change_detected_at': row[10],
-                    'last_check': row[11]
-                }
-            return None
-        except Exception as e:
-            logger.exception(f"Failed to get endpoint data for {url}: {str(e)}")
-            raise
-    def get_endpoint_data_by_id(self, id: str) -> Optional[Dict]:
-        """Get current endpoint data from id"""
-        try:
-            result = self.db.execute_query(QueryManager.SELECT_ENDPOINT_DATA_BY_ID, (id,))
-            if result:
-                row = result[0]
-                return {
-                    'id': row[0],
-                    'url': row[1],
-                    'old_status_code': row[2],
-                    'new_status_code': row[3],
-                    'old_response_size': row[4],
-                    'new_response_size': row[5],
-                    'old_body_hash': row[6],
-                    'new_body_hash': row[7],
-                    'old_body_file_path': row[8],
-                    'new_body_file_path': row[9],
-                    'change_detected_at': row[10],
-                    'last_check': row[11]
-                }
-            return None
-        except Exception as e:
-            logger.exception(f"Failed to get endpoint data for {id}: {str(e)}")
-            raise
-    def get_all_endpoints(self) -> List[Dict]:
-        """Get all monitored endpoints"""
-        try:
-            result = self.db.execute_query(QueryManager.SELECT_ALL_ENDPOINTS)
-            return [{'id': row[0], 'url': row[1]} for row in result]
-        except Exception as e:
-            logger.exception(f"Failed to get endpoints: {str(e)}")
-            raise
-    
     # --- Report ---
     def get_program_details(self, program_id=None, program_name=None) -> List[Dict]:
         """Returns program details from program_id or program_name"""
@@ -291,7 +162,6 @@ class EndpointQueryOperations:
             result = self.db.execute_query(QueryManager.CHECK_MOBILE_TARGET_VULN_EXISTS, (vulnerability_reported, target_package))
             return result[0][0]
         except Exception as e:
-            logging.exception("An error occurred")
             logger.exception(f"Failed to check if mobile target vulnerability already exists: {str(e)}")
             raise
     def get_mobile_target_data(self, target_id=None, target_package=None) -> List[Dict]:
@@ -307,16 +177,4 @@ class EndpointQueryOperations:
                 return None
         except Exception as e:
             logger.exception(f"Failed to get mobile target data: {str(e)}")
-            raise
-    def get_program_name(self, program_id) -> List[Dict]:
-        """Get program name from program id
-        """
-        try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_id,))
-            if result != []:
-                return result
-            else:
-                return None
-        except Exception as e:
-            logger.exception(f"Failed to get program name for [{program_id}]: {str(e)}")
             raise

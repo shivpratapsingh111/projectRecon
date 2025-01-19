@@ -7,19 +7,29 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import Json
 
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.db.db_queries import QueryManager
+from backend.app.testDB.not_needed.db_queries import QueryManager
+from backend.app.testDB.not_needed.db_manager import DatabaseManager
 
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='add', enable_debug = False)
-from app.config.db_config import db_config
-
-db_manager = DatabaseManager(db_config)
+# from db_manager import DatabaseManager
+# from db_queries import QueryManager
 
 class DatabaseOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
+
+        logging.basicConfig(
+            level=logging.DEBUG,  # Set logging level to DEBUG
+            format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+            handlers=[
+                logging.FileHandler('endpoint_monitor.log', mode='a'),  # Append mode for the log file
+                logging.StreamHandler()  # Print logs to the terminal
+            ]
+        )
         
+        # Create a logger for the class
+        self.logger = logging.getLogger(self.__class__.__name__)  # Use the class name for better context
+        self.logger.setLevel(logging.DEBUG)  # Ensure the logger level is set to DEBUG
+
     def insert_operations(self):
         return EndpointInsertOperations(self.db)
 
@@ -36,17 +46,13 @@ class DatabaseOperations:
 class EndpointInsertOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
+        self.logger = logging.getLogger(__name__)
 
     # --- Endpoint Monitor ---
     def insert_endpoint(self, endpoint_data: Dict):
         """Record a change in endpoint response"""
         try:
             params = (
-                endpoint_data['program_id'],
-                endpoint_data['target_id'],
-                endpoint_data['scan_name'],
-                endpoint_data['scan_interval'],
-                endpoint_data['status'],
                 endpoint_data['url'],
                 endpoint_data['old_status_code'],
                 endpoint_data['new_status_code'],
@@ -56,14 +62,13 @@ class EndpointInsertOperations:
                 endpoint_data['new_body_hash'],
                 endpoint_data['old_body_file_path'],
                 endpoint_data['new_body_file_path'],
-                endpoint_data['change_detected_at'],
-                endpoint_data['need_review']
+                endpoint_data['change_detected_at']
             )
             self.db.execute_query(QueryManager.INSERT_ENDPOINT, params)
-            logger.info(f"Endpoint Data inserted successfully - [{str(endpoint_data['url'])}]")
+            self.logger.info(f"Endpoint Data inserted successfully - [{str(endpoint_data['url'])}]")
             
         except Exception as e:
-            logger.exception(f"Failed to insert endpoint data [{str(endpoint_data['url'])}]: {str(e)}")
+            self.logger.error(f"Failed to insert endpoint data [{str(endpoint_data['url'])}]: {str(e)}")
             raise
 
     # --- Report ---
@@ -77,10 +82,10 @@ class EndpointInsertOperations:
                 program_data['report_form']
             )
             result = self.db.execute_query(QueryManager.INSERT_PROGRAM, params)
-            logger.info(f"New program created with id {result[0]}")
+            self.logger.info(f"New program created with id {result[0]}")
             return result[0]
         except Exception as e:
-            logger.exception(f"Failed to insert program data {str(program_data['program_name'])}: {str(e)}")
+            self.logger.error(f"Failed to insert program data {str(program_data['program_name'])}: {str(e)}")
             raise
     def insert_web_target(self, web_target_data: Dict):
         try:
@@ -98,10 +103,10 @@ class EndpointInsertOperations:
                 web_target_data['vulnerability_reported']
             )
             result = self.db.execute_query(QueryManager.INSERT_WEB_TARGET, params)
-            logger.info(f"New web-target created with id {result[0]}")
+            self.logger.info(f"New web-target created with id {result[0]}")
             return result[0]
         except Exception as e:
-            logger.exception(f"Failed to insert web target data {str(web_target_data['target_domain'])} : {str(e)}")
+            self.logger.error(f"Failed to insert web target data {str(web_target_data['target_domain'])} : {str(e)}")
             raise
     def insert_mobile_target(self, mobile_target_data: Dict):
         try:
@@ -114,17 +119,18 @@ class EndpointInsertOperations:
                 extensions.adapt(mobile_target_data['vulnerability_reported'])
             )
             result = self.db.execute_query(QueryManager.INSERT_MOBILE_TARGET, params)
-            logger.info(f"New mobile-target created with id {result[0]}")
+            self.logger.info(f"New mobile-target created with id {result[0]}")
             
             return result[0]
         except Exception as e:
-            logger.exception(f"Failed to insert mobile target data {str(mobile_target_data['target_package'])} : {str(e)}")
+            self.logger.error(f"Failed to insert mobile target data {str(mobile_target_data['target_package'])} : {str(e)}")
             raise
 
 
 class EndpointUpdateOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
+        self.logger = logging.getLogger(__name__)
 
     # --- Endpoint Monitor ---
     def update_endpoint_data(self, id: int, endpoint_data: Dict):
@@ -142,16 +148,16 @@ class EndpointUpdateOperations:
                 endpoint_data['change_detected_at'],
                 id
             )
-            # logger.info(f"Query: {QueryManager.INSERT_ENDPOINT}, Parameters: {params}")
+            # self.logger.info(f"Query: {QueryManager.INSERT_ENDPOINT}, Parameters: {params}")
             self.db.execute_query(QueryManager.UPDATE_ENDPOINT_DATA, params)
         except Exception as e:
-            logger.exception(f"Failed to update endpoint {id}: {str(e)}")
+            self.logger.error(f"Failed to update endpoint {id}: {str(e)}")
             raise
     def update_endpoint_timestamp(self, id: int):
         try:
             self.db.execute_query(QueryManager.UPDATE_ENDPOINT_TIMESTAMP, (id,))
         except Exception as e:
-            logger.exception(f"Failed to update timestamp for endpoint {id}: {str(e)}")
+            self.logger.error(f"Failed to update timestamp for endpoint {id}: {str(e)}")
             raise
 
     # --- Report ---
@@ -164,13 +170,14 @@ class EndpointUpdateOperations:
             )
             self.db.execute_query(QueryManager.UPDATE_MOBILE_TARGET_DATA, params)
         except Exception as e:
-            logger.exception(f"Failed to update mobile target vulnerability {id}: {str(e)}")
+            self.logger.error(f"Failed to update mobile target vulnerability {id}: {str(e)}")
             raise
 
 
 class EndpointDeleteOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
+        self.logger = logging.getLogger(__name__)
 
     # --- Endpoint Monitor ---
     def delete_endpoint(self, id: int):
@@ -179,12 +186,13 @@ class EndpointDeleteOperations:
             # First delete associated changes due to foreign key constraint
             self.db.execute_query(QueryManager.DELETE_ENDPOINT, (id,))
         except Exception as e:
-            logger.exception(f"Failed to delete endpoint {id}: {str(e)}")
+            self.logger.error(f"Failed to delete endpoint {id}: {str(e)}")
             raise
 
 class EndpointQueryOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
+        self.logger = logging.getLogger(__name__)
 
     # --- Endpoint Monitor ---
     def get_endpoint_data_by_url(self, url: str) -> Optional[Dict]:
@@ -209,7 +217,7 @@ class EndpointQueryOperations:
                 }
             return None
         except Exception as e:
-            logger.exception(f"Failed to get endpoint data for {url}: {str(e)}")
+            self.logger.error(f"Failed to get endpoint data for {url}: {str(e)}")
             raise
     def get_endpoint_data_by_id(self, id: str) -> Optional[Dict]:
         """Get current endpoint data from id"""
@@ -233,7 +241,7 @@ class EndpointQueryOperations:
                 }
             return None
         except Exception as e:
-            logger.exception(f"Failed to get endpoint data for {id}: {str(e)}")
+            self.logger.error(f"Failed to get endpoint data for {id}: {str(e)}")
             raise
     def get_all_endpoints(self) -> List[Dict]:
         """Get all monitored endpoints"""
@@ -241,7 +249,7 @@ class EndpointQueryOperations:
             result = self.db.execute_query(QueryManager.SELECT_ALL_ENDPOINTS)
             return [{'id': row[0], 'url': row[1]} for row in result]
         except Exception as e:
-            logger.exception(f"Failed to get endpoints: {str(e)}")
+            self.logger.error(f"Failed to get endpoints: {str(e)}")
             raise
     
     # --- Report ---
@@ -258,7 +266,7 @@ class EndpointQueryOperations:
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get program details [{str(program_name)}]: {str(e)}")
+            self.logger.error(f"Failed to get program details [{str(program_name)}]: {str(e)}")
             raise
 
     def check_program_exists(self, program_name) -> List[Dict]:
@@ -267,7 +275,7 @@ class EndpointQueryOperations:
             result = self.db.execute_query(QueryManager.CHECK_PROGRAM_EXISTS, (program_name,))
             return result[0][0]
         except Exception as e:
-            logger.exception(f"Failed to check if program exists: {str(e)}")
+            self.logger.error(f"Failed to check if program exists: {str(e)}")
             raise
     def check_mobile_target_exists(self, target_package) -> List[Dict]:
         """Check if mobile target exists"""
@@ -275,7 +283,7 @@ class EndpointQueryOperations:
             result = self.db.execute_query(QueryManager.CHECK_MOBILE_TARGET_EXISTS, (target_package,))
             return result[0][0]
         except Exception as e:
-            logger.exception(f"Failed to check if mobile target exists: {str(e)}")
+            self.logger.error(f"Failed to check if mobile target exists: {str(e)}")
             raise
     def check_web_target_exists(self, target_domain) -> List[Dict]:
         """Check if web target exists"""
@@ -283,7 +291,7 @@ class EndpointQueryOperations:
             result = self.db.execute_query(QueryManager.CHECK_WEB_TARGET_EXISTS, (target_domain,))
             return result[0][0]
         except Exception as e:
-            logger.exception(f"Failed to check if web target exists: {str(e)}")
+            self.logger.error(f"Failed to check if web target exists: {str(e)}")
             raise
     def check_mobile_target_vuln_exists(self, vulnerability_reported, target_package) -> List[Dict]:
         """Check if mobile target vulnerability already exists"""
@@ -292,7 +300,7 @@ class EndpointQueryOperations:
             return result[0][0]
         except Exception as e:
             logging.exception("An error occurred")
-            logger.exception(f"Failed to check if mobile target vulnerability already exists: {str(e)}")
+            self.logger.error(f"Failed to check if mobile target vulnerability already exists: {str(e)}")
             raise
     def get_mobile_target_data(self, target_id=None, target_package=None) -> List[Dict]:
         """Returns mobile target data from target_package name or target_id"""
@@ -306,17 +314,7 @@ class EndpointQueryOperations:
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get mobile target data: {str(e)}")
+            self.logger.error(f"Failed to get mobile target data: {str(e)}")
             raise
-    def get_program_name(self, program_id) -> List[Dict]:
-        """Get program name from program id
-        """
-        try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_id,))
-            if result != []:
-                return result
-            else:
-                return None
-        except Exception as e:
-            logger.exception(f"Failed to get program name for [{program_id}]: {str(e)}")
-            raise
+
+    

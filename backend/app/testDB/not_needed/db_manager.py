@@ -1,19 +1,31 @@
 # db_manager.py
-
-# ===[Imports]===
 from typing import Dict, List, Optional, Any, Tuple
 import psycopg2
+from psycopg2.extras import Json
+import logging
+from datetime import datetime
+# from app.testDB.db_queries import QueryManager
 
-# ===[Local Imports]===
 from backend.app.testDB.not_needed.db_queries import QueryManager
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
+# from db_queries import QueryManager
 
 
 class DatabaseManager:
     def __init__(self, db_config: Dict):
         self.db_config = db_config
 
+        logging.basicConfig(
+            level=logging.INFO,  # Set logging level to DEBUG
+            format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+            handlers=[
+                logging.FileHandler('endpoint_monitor.log', mode='a'),  # Append mode for the log file
+                logging.StreamHandler()  # Print logs to the terminal
+            ]
+        )
+        
+        # Create a logger for the class
+        self.logger = logging.getLogger(self.__class__.__name__)  # Use the class name for better context
+        self.logger.setLevel(logging.INFO)  # Ensure the logger level is set to DEBUG
         # Initialize database and tables
         self._initialize_database()
 
@@ -34,10 +46,10 @@ class DatabaseManager:
             db_exists =  cur.fetchone()
             
             if db_exists:
-                logger.info(f"DB already exists {target_db} - Proceeding...")
+                self.logger.info(f"DB already exists {target_db} - Proceeding...")
                 
             if not db_exists:
-                logger.info(f"Creating database {target_db}")
+                self.logger.info(f"Creating database {target_db}")
                 # Close existing connections to avoid "database is being accessed by other users"
                 cur.execute(f"""
                     SELECT pg_terminate_backend(pg_stat_activity.pid)
@@ -48,7 +60,7 @@ class DatabaseManager:
                 cur.execute(f"CREATE DATABASE {target_db}")
             
         except Exception as e:
-            logger.exception(f"Failed to create database: {str(e)}")
+            self.logger.error(f"Failed to create database: {str(e)}")
             raise
         finally:
             if conn:
@@ -62,16 +74,18 @@ class DatabaseManager:
             # Set extension for uuid_generate_v4()
             cur.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
             
-            logger.info("Initializing database tables")
+            self.logger.info("Initializing database tables")
+            # cur.execute(QueryManager.CREATE_ENDPOINTS_TABLE)
+            # cur.execute(QueryManager.CREATE_CHANGES_TABLE)
             
             # Create all tables from a list
             for QueryManager.tables in QueryManager.CREATE_TABLE_LIST:
                 cur.execute(QueryManager.tables)
             conn.commit()
-            logger.info("Database initialization completed successfully")
+            self.logger.info("Database initialization completed successfully")
             
         except Exception as e:
-            logger.exception(f"Failed to initialize tables: {str(e)}")
+            self.logger.error(f"Failed to initialize tables: {str(e)}")
             if conn:
                 conn.rollback()
             raise
@@ -105,7 +119,7 @@ class DatabaseManager:
         except Exception as e:
             if conn:
                 conn.rollback()
-            logger.exception(f"Database error: {str(e)}")
+            self.logger.error(f"Database error: {str(e)}")
             raise
         finally:
             if cur:
@@ -127,7 +141,7 @@ class DatabaseManager:
         except Exception as e:
             if conn:
                 conn.rollback()
-            logger.exception(f"Database error in batch operation: {str(e)}")
+            self.logger.error(f"Database error in batch operation: {str(e)}")
             raise
         finally:
             if cur:

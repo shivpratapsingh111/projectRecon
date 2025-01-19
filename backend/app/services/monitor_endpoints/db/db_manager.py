@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import psycopg2
 
 # ===[Local Imports]===
-from backend.app.testDB.not_needed.db_queries import QueryManager
+from app.services.monitor_endpoints.db.db_queries import QueryManager
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 
@@ -13,10 +13,10 @@ logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug 
 class DatabaseManager:
     def __init__(self, db_config: Dict):
         self.db_config = db_config
-
-        # Initialize database and tables
-        self._initialize_database()
-
+        
+        # [Create DB and TABLE if not exists]
+        # self._initialize_database()
+        
     def _initialize_database(self):
         """Create database if it doesn't exist and initialize tables"""
         # First connect to default postgres database to create our database if needed

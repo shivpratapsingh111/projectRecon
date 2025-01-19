@@ -68,7 +68,9 @@ class QueryManager:
             need_review BOOLEAN DEFAULT FALSE,
             last_check TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """    
+    """
+
+    
     CREATE_TABLE_LIST = [CREATE_PROGRAMS_TABLE, CREATE_WEB_TARGETS_TABLE, CREATE_MOBILE_TARGETS_TABLE, CREATE_ENDPOINTS_TABLE]
 
 # ---
