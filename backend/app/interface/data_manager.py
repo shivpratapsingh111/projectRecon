@@ -22,8 +22,14 @@ class GroupManager:
     def _initialize_file(self):
         """Create or verify JSON file with proper initial structure."""
         if not os.path.exists(self.file_path):
+            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
             initial_data = {"groups": {}}
-            self._write_to_file(initial_data)
+            try:
+                with open(self.file_path, 'w') as f:
+                    json.dump(initial_data, f, indent=2)
+            except IOError as e:
+                raise GroupManagementError(f"Error writing to file: {e}")
+
         else:
             try:
                 with open(self.file_path, 'r') as f:
@@ -32,8 +38,12 @@ class GroupManager:
                     data = {"groups": {}}
                     self._write_to_file(data)
             except json.JSONDecodeError:
-                initial_data = {"groups": {}}
-                self._write_to_file(initial_data)
+                try:
+                    with open(self.file_path, 'w') as f:
+                        initial_data = {"groups": {}}
+                        json.dump(initial_data, f, indent=2)
+                except IOError as e:
+                    raise GroupManagementError(f"Error writing to file: {e}")
     
     def _read_file(self) -> Dict[str, Any]:
         """
@@ -59,6 +69,7 @@ class GroupManager:
             data (Dict): Data to write to file
         """
         try:
+            self._initialize_file()
             with open(self.file_path, 'w') as f:
                 json.dump(data, f, indent=2)
         except IOError as e:

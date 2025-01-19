@@ -12,12 +12,7 @@ from app.api.mail_reports import report
 from backend.app.api.add import handle_add
 from backend.app.api.monitor_endpoints import handle_monitor
 
-db_config = {
-    'dbname': 'test_monitor',
-    'user': 'postgres',
-    'password': 'postgres',
-    'host': 'localhost'
-}
+from app.config.db_config import db_config
 
 db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
 
