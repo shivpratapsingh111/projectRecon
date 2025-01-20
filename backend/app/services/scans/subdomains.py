@@ -1,37 +1,18 @@
 import datetime, time, subprocess
 from app.config.config  import *
-from app.interface.process_manager import DomainCommandManager
+from backend.app.interface.process_manager import run_commands
+from app.logger.logger import setup_logger
+logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
-# manager = None
 
-manager = DomainCommandManager()
 group_results = {}
-
-def are_all_commands_completed(group_name):
-    """
-    Check if all commands in the data have status 'completed'.
-    :param data: Dictionary containing group_name, domains, and commands
-    :return: True if all commands have 'completed' status, False otherwise
-    """
-    while True:
-        data = manager.command_monitor(group_name)
-        # Loop through all domains
-        for domain_id, domain_data in data.get('domains', {}).items():
-            commands = domain_data.get('commands', {})
-            # Loop through all commands
-            for command_name, command_data in commands.items():
-                if command_data.get('status') != 'completed':
-                    break  # Return False immediately if any status is not 'completed'
-        return data  # Return True if all commands are 'completed'
-        time.sleep(5)
-
 
 def organise_subdomains(group_name, domain_list):
 
     for domain in domain_list:
         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
 
-        print(f"Organising Subdomain Enum for {domain}")
+        logger.debug(f"Starting to organise Subdomain Enum for {domain}")
 
         if os.path.exists(f"{result_dir}/{active_CombinedSubdomainResults}"):
 
@@ -40,10 +21,9 @@ def organise_subdomains(group_name, domain_list):
             ]
 
             # Execute commands and store the result
-            group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+            group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-            final_monitoring_result = are_all_commands_completed(group_name)
-            print(f"Organising Subdomains - 1 [Completed] [{domain}]")
+            logger.debug(f"Organising Subdomains - 1 (first step) [Completed] [{domain}]")
 
 
         else:
@@ -52,27 +32,23 @@ def organise_subdomains(group_name, domain_list):
             ]
 
             # Execute commands and store the result
-            group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+            group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-            final_monitoring_result = are_all_commands_completed(group_name)
-
-            print(f"Organising Subdomains - 2 [Completed] [{domain}]")
+            logger.debug(f"Organising Subdomains - 2 (second step) [Completed] [{domain}]")
 
             commands = [
                 ("Organising Subdomains - 3", f"""cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
             ]
 
             # Execute commands and store the result
-            group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+            group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-        final_monitoring_result = are_all_commands_completed(group_name)
-        print(f"Organising Subdomains - 3 [Completed] [{domain}]")
-        print(f"Organising Subdomains completed for [{domain}]")
+        logger.info(f"Organising Subdomains completed - 3 (last step) [{domain}]")
 
 
 def screenshot_subdomains(group_name, domain_list):
     for domain in domain_list:
-        print(f"Screenshoting for {domain}")
+        logger.debug(f"Screenshoting for {domain}")
         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains/screenshots"
         os.makedirs(result_dir, exist_ok=True) # Making a directory for each domain passed as targets
 
@@ -80,13 +56,12 @@ def screenshot_subdomains(group_name, domain_list):
             ("Screenshot Subdomains", f"cd {root_Data_Dir}/{group_name}/{domain}/subdomains && nuclei -l {root_Data_Dir}/{group_name}/{domain}/subdomains/{subdomainResults} -headless -t ~/nuclei-templates/headless/screenshot.yaml -c 100", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
 
-    final_monitoring_result = are_all_commands_completed(group_name)
-    print(f"Screenshot completed")
+    logger.info("Screenshot completed")
 
 
-def func_subdomains_ps(group_name, domain_list):
+def func_subdomains_ps(group_name, domain_list, execution_style):
 
     # Store results for each domain
     group_results = {}
@@ -103,10 +78,8 @@ def func_subdomains_ps(group_name, domain_list):
         ]
         
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style=execution_style)
  
-    final_monitoring_result = are_all_commands_completed(group_name)
-
 
     for domain in domain_list:
         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
@@ -120,10 +93,10 @@ def func_subdomains_ps(group_name, domain_list):
                 shell=True,
             )
             process.wait()
-        print("Passive Subdomains completed for", domain)
+        logger.info(f"Passive Subdomains completed for {domain}")
 
 
-def func_subdomains_ac(group_name, domain_list):
+def func_subdomains_ac(group_name, domain_list, execution_style):
     
     # Store results for each domain
     group_results = {}
@@ -139,9 +112,7 @@ def func_subdomains_ac(group_name, domain_list):
              f"{result_dir}/{alterx_Active_SubdomainResults}", 
              f"{result_dir}/logs/{alterx_Active_SubdomainResults}")
         ]
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
-
-    final_monitoring_result = are_all_commands_completed(group_name)
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style=execution_style)
 
     # Execute DNS resolver commands
     for domain in domain_list:
@@ -153,26 +124,26 @@ def func_subdomains_ac(group_name, domain_list):
              f"{result_dir}/{active_CombinedSubdomainResults}", 
              f"{result_dir}/logs/{active_CombinedSubdomainResults}")
         ]
-        group_results[f"{domain}_dnsresolver"] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
+        group_results[f"{domain}_dnsresolver"] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="parallel")
     
-    final_monitoring_result = are_all_commands_completed(group_name)
-    print("Active Subdomains completed")
+    logger.info(f"Active Subdomains completed for {domain}")
 
 
     return group_results
 
 
 
-def func_subdomains_both(group_name, domain_list):
-    print("Executing: func_subdomains_both")
-    func_subdomains_ps(group_name, domain_list)
-    func_subdomains_ac(group_name, domain_list)
+def func_subdomains_both(group_name, domain_list, execution_style):
+    logger.debug("Executing: func_subdomains_both")
+    func_subdomains_ps(group_name, domain_list, execution_style)
+    func_subdomains_ac(group_name, domain_list, execution_style)
     organise_subdomains(group_name,domain_list)
     screenshot_subdomains(group_name, domain_list)
 
 
-def func_subdomains_ps_only(group_name, domain_list):
-    print("Executing: func_subdomains_ps_only")
-    func_subdomains_ps(group_name, domain_list)
+def func_subdomains_ps_only(group_name, domain_list, execution_style):
+    logger.debug("Executing: func_subdomains_ps_only")
+    func_subdomains_ps(group_name, domain_list, execution_style)
+    logger.debug("Passive Subdomain Enumeration completed")
     organise_subdomains(group_name,domain_list)
     screenshot_subdomains(group_name, domain_list)

@@ -1,13 +1,7 @@
-from app.api import file_get_all
 from app.config.config  import *
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
-from typing import List, Optional, Union, Dict
+from typing import List, Optional
 from pydantic import BaseModel
-import uvicorn, asyncio, time
 from fastapi import APIRouter
-from app.interface.process_manager import DomainCommandManager
-import json
 
 
 from backend.app.services.mail_reports.report import *
@@ -15,10 +9,7 @@ from backend.app.services.mail_reports.report import *
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='mail_reports', enable_debug = False)
 
-
-
 router = APIRouter()
-manager = DomainCommandManager()
 
 class Report(BaseModel):
     program_name: str

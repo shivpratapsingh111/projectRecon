@@ -1,41 +1,51 @@
 from concurrent.futures import ThreadPoolExecutor
 from app.config.config  import *
-from app.services.pyscripts.urls import func_urls_both
-from app.services.pyscripts.subdomains import func_subdomains_both
-from app.services.pyscripts.subdomains import func_subdomains_ps_only
+from backend.app.services.scans.urls import func_urls_both
+from backend.app.services.scans.subdomains import func_subdomains_both
+from backend.app.services.scans.subdomains import func_subdomains_ps_only
 import os
+from app.services.monitor_endpoints.db.db_manager import DatabaseManager
+from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+from app.logger.logger import setup_logger
+from app.config.db_config import db_config
+logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = False)
+
+
+db_manager = DatabaseManager(db_config)
+db_ops = DatabaseOperations(db_manager)
+
 # from app.config.celery_config import celery
 
-# def func_js(group_name, domain_list):
+# def func_js(group_name, domain_list, execution_style):
 #     result_dir = f"{target_dir}js"
 #     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
 #     print("Executing: func_js")
 
-# def func_nuclei(group_name, domain_list):
+# def func_nuclei(group_name, domain_list, execution_style):
 #     result_dir = f"{target_dir}nuclei"
 #     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
 #     print("Executing: func_nuclei")
 
-# def func_nmap(group_name, domain_list):
+# def func_nmap(group_name, domain_list, execution_style):
 #     result_dir = f"{target_dir}nmap"
 #     os.makedirs(result_dir, exist_ok=True) # Making subdomains/ directory inside target directory
 #     print("Executing: func_nmap")
 
 # @celery.task
-def start_scan(group_name, domain_list, scan_list):
+def start_scan(group_name, domain_list, execution_style, scan_list):
     global root_Data_Dir  # Define root directory
     
     # Define target directory and logs
     target_dir = f"{root_Data_Dir}/{group_name}"
     os.makedirs(target_dir, exist_ok=True)  # Create main target directory and logs directory
-    
+    logger.debug(f"Made target dir {target_dir}")
     targets_file = f"{target_dir}/targets.txt"
     
     # Write domain list to file
     with open(targets_file, 'w') as f:
         for domain in domain_list:
             f.write(domain.strip() + "\n")
-    
+    logger.debug(f"Written domains to file: {targets_file}")
     # Define the actions and their respective functions
     actions = {
         "subdomainBoth": func_subdomains_both,
@@ -66,20 +76,27 @@ def start_scan(group_name, domain_list, scan_list):
             related_scans = required_order[scan]
             for related_scan in related_scans:
                 if related_scan in scan_list and related_scan not in completed_scans:
+                    logger.error(f"'{related_scan}' requires '{scan}' to be executed first.")
                     return {"error": f"'{related_scan}' requires '{scan}' to be executed first."}
             # Execute the scan
-            actions[scan](group_name, domain_list)
+            logger.debug(f"Calling {scan}({group_name, domain_list, execution_style})")
+            actions[scan](group_name, domain_list, execution_style)
             completed_scans.add(scan)
+            logger.debug(f"Scan completed {scan}")
     
     # Step 2: Execute remaining scans in any order
     for scan in scan_list:
         if scan not in completed_scans:  # Skip already executed scans
+            logger.debug(f"Scan {scan} is laready completed")
             if scan in actions:
-                actions[scan](group_name, domain_list)  # Execute the scan
+                logger.debug(f"Calling {scan}({group_name, domain_list, execution_style})")
+                actions[scan](group_name, domain_list, execution_style)  # Execute the scan
                 completed_scans.add(scan)
+                logger.debug(f"Scan completed {scan}")
             else:
+                logger.error(f"Invalid Scan {scan}")
                 return {"error": f"Invalid scan: '{scan}'."}
-    
+    logger.info("All scans executed successfully")
     return {"status": "All scans executed successfully", "executed_scans": list(completed_scans)}
     
 
@@ -87,4 +104,4 @@ def start_scan(group_name, domain_list, scan_list):
 # scan_list = ["subdomains_ps_only"]
 # domain_list = ["thecyberboy.com"]
 # group_name = "heavy"
-# start_scan(group_name, domain_list, scan_list)
+# start_scan(group_name, domain_list, execution_style, scan_list)

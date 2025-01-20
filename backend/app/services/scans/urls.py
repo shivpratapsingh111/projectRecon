@@ -1,31 +1,16 @@
 from app.config.config  import *
-import os, re, requests, subprocess, datetime, time
-from app.interface.process_manager import DomainCommandManager
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from app.services.pyscripts.arrange_urls import arrangeUrls
-manager = DomainCommandManager()
+import os
+import subprocess
+import backend.app.services.scans.arrange_urls
+from backend.app.interface.process_manager import run_commands
+from app.logger.logger import setup_logger
+logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
+
+
 group_results = {}
 
-def are_all_commands_completed(group_name):
-    """
-    Check if all commands in the data have status 'completed'.
-    :param data: Dictionary containing group_name, domains, and commands
-    :return: True if all commands have 'completed' status, False otherwise
-    """
-    while True:
-        data = manager.command_monitor(group_name)
-        # Loop through all domains
-        for domain_id, domain_data in data.get('domains', {}).items():
-            commands = domain_data.get('commands', {})
-            # Loop through all commands
-            for command_name, command_data in commands.items():
-                if command_data.get('status') != 'completed':
-                    break  # Return False immediately if any status is not 'completed'
-        return data  # Return True if all commands are 'completed'
-        time.sleep(5)
-
-def func_urls_ps(group_name, domain_list):
-    print("Executing: func_urls_ps")
+def func_urls_ps(group_name, domain_list, execution_style):
+    logger.debug("Starting passive url enumeration")
 
     # Store results for each domain
     group_results = {}
@@ -43,9 +28,8 @@ def func_urls_ps(group_name, domain_list):
         ]
         
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="urls")
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style=execution_style)
 
-    final_monitoring_result = are_all_commands_completed(group_name)
 
     for domain in domain_list:
         command = f"cat {result_dir}/{waybackurls_Passive_UrlResults} {result_dir}/{gau_Passive_UrlResults} {result_dir}/{waymore_Passive_UrlResults} | sort -u >> {result_dir}/{passive_CombinedUrlResults}" # Combining passive results
@@ -58,11 +42,11 @@ def func_urls_ps(group_name, domain_list):
             )
             process.wait()
 
-        print(f"Passive URL Enum completed")
+        logger.debug(f"Passive URL Enum completed")
 
 
-def func_urls_ac(group_name, domain_list):
-    print("Executing: func_urls_ac")
+def func_urls_ac(group_name, domain_list, execution_style):
+    logger.debug("Starting active url enumeration")
 
     # Store results for each domain
     group_results = {}
@@ -74,13 +58,11 @@ def func_urls_ac(group_name, domain_list):
         os.makedirs(result_dir, exist_ok=True)
         commands = [
             ("katana", f"katana -u {domain_dir}/subdomains/{subdomainResults} -o {result_dir}/{katana_Active_UrlResults} -silent -hl -nc -d 5 -aff -retry 2 -iqp -c 20 -p 20 -xhr -jc -kf -ef css,jpg,jpeg,png,svg,img,gif,mp4,flv,ogv,webm,webp,mov,mp3,m4a,m4p,scss,tif,tiff,ttf,otf,woff,woff2,bmp,ico,eot,htc,rtf,swf,image", f"{result_dir}/{katana_Active_UrlResults}_stdout", f"{result_dir}/logs/katana2from_start_tool_func"),
-            ("hakrawler", f"cat {domain_dir}/subdomains/{subdomainResults} | sed 's/^/https:\/\//' | hakrawler -d 5 -insecure -subs -t 40", f"{result_dir}/{hakrawler_Active_UrlResults}", f"{result_dir}/logs/{hakrawler_Active_UrlResults}")
+            ("hakrawler", f"cat {domain_dir}/subdomains/{subdomainResults} | sed 's/^/https:\\/\\//' | hakrawler -d 5 -insecure -subs -t 40", f"{result_dir}/{hakrawler_Active_UrlResults}", f"{result_dir}/logs/{hakrawler_Active_UrlResults}")
         ]
         
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="urls")
-
-    final_monitoring_result = are_all_commands_completed(group_name)
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style=execution_style)
 
     for domain in domain_list:
         command = f"cat {result_dir}/{katana_Active_UrlResults} {result_dir}/{hakrawler_Active_UrlResults} | sort -u >> {result_dir}/{active_CombinedUrlResults}" # Combining passive results
@@ -92,40 +74,38 @@ def func_urls_ac(group_name, domain_list):
                 shell=True,
             )
             process.wait()
-        print(f"Active URL Enum completed")
+        logger.debug(f"Active URL Enum completed")
 
 
-def organise_urls(group_name,domain_list):
+def organise_urls(group_name, domain_list):
     for domain in domain_list:
-        print(f"Organising URL Enum for {domain}")
+        logger.debug(f"Organising URL Enum for {domain}")
         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/urls"
 
         commands = [
             ("Organising Urls", f"cat {result_dir}/{passive_CombinedUrlResults} {result_dir}/{active_CombinedUrlResults} | sort -u >> {result_dir}/{urlResults}", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
-        final_monitoring_result = are_all_commands_completed(group_name)
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
 
         commands = [
             ("Extracting JS Urls", f"""cat {result_dir}/{urlResults} | grep -F .js | cut -d "?" -f 1 | sort -u >> {result_dir}/{jsUrls}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
-        final_monitoring_result = are_all_commands_completed(group_name)
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
 
         commands = [
-            ("Arranging Urls", f"python3 backend/app/services/pyscripts/arrange_urls.py {result_dir}/{urlResults} {result_dir}/{urlsArranged200} {result_dir}/{urlsArrangedAll}", f"{root_Data_Dir}/{group_name}/urlsArrange_stdout", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+            ("Arranging Urls", f"python3 {backend.app.services.scans.arrange_urls.__file__} {result_dir}/{urlResults} {result_dir}/{urlsArranged200} {result_dir}/{urlsArrangedAll}", f"{root_Data_Dir}/{group_name}/urlsArrange_stdout", f"{root_Data_Dir}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
-        group_results[domain] = manager.command_executor(group_name, domain_list, domain, commands, scan_dir="subdomains")
-        final_monitoring_result = are_all_commands_completed(group_name)
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
 
-        print(f"Urls arranged successfully for {domain}")
-
+        logger.debug(f"Urls arranged for {domain}")
 
 
-def func_urls_both(group_name, domain_list):
-    func_urls_ps(group_name, domain_list)
-    func_urls_ac(group_name, domain_list)
+
+def func_urls_both(group_name, domain_list, execution_style):
+    func_urls_ps(group_name, domain_list, execution_style)
+    func_urls_ac(group_name, domain_list, execution_style)
     organise_urls(group_name,domain_list)
+    logger.info("URL enumration completed.")

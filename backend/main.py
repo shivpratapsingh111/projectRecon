@@ -1,4 +1,4 @@
-from app.api import file_get_all, web
+from app.api import file_get_all
 from app.config.config  import *
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from typing import List, Optional
@@ -8,11 +8,12 @@ from fastapi import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.db_manager import DatabaseManager
-from app.api.mail_reports import report
-from backend.app.api.add import handle_add
-from backend.app.api.monitor_endpoints import handle_monitor
+from backend.app.api.mail_reports import handler_report
+from backend.app.api.add import handler_add
+from backend.app.api.monitor_endpoints import handler_monitor
 
 from app.config.db_config import db_config
+from backend.app.api.web_scan import handler_web
 
 db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
 
@@ -38,10 +39,10 @@ async def root():
 
 
 
-app.include_router(web.router, prefix="/scan", tags=["Scanning"])
-app.include_router(handle_add.router, prefix="/add", tags=["Add"])
-app.include_router(report.router, tags=["Report"])
-app.include_router(handle_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
+app.include_router(handler_web.router, prefix="/scan", tags=["Scanning"])
+app.include_router(handler_add.router, prefix="/add", tags=["Add"])
+app.include_router(handler_report.router, tags=["Report"])
+app.include_router(handler_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
 
 
 

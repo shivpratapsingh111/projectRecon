@@ -2,79 +2,87 @@
 import json
 import uuid
 import os
+import inspect
+
 from typing import Dict, Any, Optional
+from app.logger.logger import setup_logger
+logger = setup_logger(__name__, log_file_path='scan', enable_debug = True)
+from app.config.config import data_file
 
 class GroupManagementError(Exception):
     """Custom exception for group management operations."""
     pass
 
 class GroupManager:
-    def __init__(self, file_path: str):
+    def __init__(self):
         """
         Initialize the GroupManager with a specific file path.
         
         Args:
             file_path (str): Path to the JSON file storing group data
         """
-        self.file_path = file_path
+        self.file_path = data_file
         self._initialize_file()
     
     def _initialize_file(self):
         """Create or verify JSON file with proper initial structure."""
-        if not os.path.exists(self.file_path):
-            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-            initial_data = {"groups": {}}
-            try:
-                with open(self.file_path, 'w') as f:
-                    json.dump(initial_data, f, indent=2)
-            except IOError as e:
-                raise GroupManagementError(f"Error writing to file: {e}")
 
+        initial_data = {"groups": {}}
+
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+
+        if not os.path.exists(self.file_path):
+            # Create the file with the initial structure if it doesn't exist
+            self._write_to_file(initial_data)
+            logger.debug(f"Data file initialized {self.file_path}")
         else:
+            logger.debug(f"Json Data file exists {self.file_path}")
             try:
                 with open(self.file_path, 'r') as f:
                     data = json.load(f)
+
+                # Validate the existing data structure
                 if not isinstance(data, dict) or "groups" not in data:
-                    data = {"groups": {}}
-                    self._write_to_file(data)
-            except json.JSONDecodeError:
-                try:
-                    with open(self.file_path, 'w') as f:
-                        initial_data = {"groups": {}}
-                        json.dump(initial_data, f, indent=2)
-                except IOError as e:
-                    raise GroupManagementError(f"Error writing to file: {e}")
+                    logger.error(f"Json data file exists, but is corrupted {self.file_path}")
+            except (json.JSONDecodeError, IOError):
+                logger.error(f"Json data file is corrupted {self.file_path}")
+                logger.error(f"Something went wrong while processing existing json data file {self.file_path}")
+                
+
+
+
+    def _write_to_file(self, data):
+        """Write data to the file."""
+        try:
+            with open(self.file_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            # logger.debug(f"Data written to {self.file_path}")
+        except IOError as e:
+            logger.exception(f"Error writing in {self.file_path}")
+            raise GroupManagementError(f"Error writing to file: {e}")
     
     def _read_file(self) -> Dict[str, Any]:
         """
         Read and parse the JSON file.
-        
+
         Returns:
             Dict: Parsed JSON data
         """
         try:
             with open(self.file_path, 'r') as f:
-                data = json.load(f)
-                if not isinstance(data, dict) or "groups" not in data:
-                    data = {"groups": {}}
-            return data
+                content = f.read().strip()
+                if not content:
+                    logger.warning(f"JSON file {self.file_path} is empty when read.")
+                    return {"groups": {}}  # Return default structure if empty
+                
+                data = json.loads(content)
+                return data
         except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.exception(f"Error reading {self.file_path}: {e}")
             raise GroupManagementError(f"Error reading file: {e}")
-    
-    def _write_to_file(self, data: Dict[str, Any]):
-        """
-        Write data to the JSON file.
+
         
-        Args:
-            data (Dict): Data to write to file
-        """
-        try:
-            self._initialize_file()
-            with open(self.file_path, 'w') as f:
-                json.dump(data, f, indent=2)
-        except IOError as e:
-            raise GroupManagementError(f"Error writing to file: {e}")
-    
     def create_group(self, group_name: str) -> str:
         """
         Create a new group or return existing group UUID.
@@ -145,13 +153,16 @@ class GroupManager:
         data = self._read_file()
         
         if group_uuid not in data['groups']:
+            logger.error(f"Group with UUID {group_uuid} not found")
             raise GroupManagementError(f"Group with UUID {group_uuid} not found")
             
         if domain_uuid not in data['groups'][group_uuid]['domains']:
+            logger.error(f"Domain with UUID {domain_uuid} not found in group")
             raise GroupManagementError(f"Domain with UUID {domain_uuid} not found in group")
         
         command_name = command_details.get('command_name')
         if not command_name:
+            logger.error("Command name is required")
             raise GroupManagementError("Command name is required")
             
         # Update or add command
@@ -182,6 +193,7 @@ class GroupManager:
         data = self._read_file()
         
         if group_uuid not in data['groups']:
+            logger.error(f"Group with UUID {group_uuid} not found")
             raise GroupManagementError(f"Group with UUID {group_uuid} not found")
         
         return data['groups'][group_uuid]
@@ -201,7 +213,7 @@ class GroupManager:
         for group in data['groups'].values():
             if domain_uuid in group['domains']:
                 return group['domains'][domain_uuid]
-        
+        logger.error(f"Domain with UUID {domain_uuid} not found")
         raise GroupManagementError(f"Domain with UUID {domain_uuid} not found")
 
     def get_domain_by_name(self, domain_name: str) -> Optional[Dict[str, Any]]:
@@ -247,7 +259,7 @@ class GroupManager:
                         "domain_uuid": domain_uuid,
                         **domain['commands'][command_name]
                     }
-        
+        logger.error(f"Command with name {command_name} not found")
         raise GroupManagementError(f"Command with name {command_name} not found")
 
     def list_groups(self) -> Dict[str, str]:
@@ -308,6 +320,7 @@ class GroupManager:
             return command_pids
 
         except GroupManagementError as e:
+            logger.exception(f"Error retrieving PIDs for domain {domain_uuid}: {e}")
             raise GroupManagementError(f"Error retrieving PIDs for domain {domain_uuid}: {e}")
 
     def update_command_status_by_pid(self, pid: int, new_status: str) -> Dict[str, Any]:
@@ -339,7 +352,7 @@ class GroupManager:
                             'previous_status': previous_status,
                             'new_status': new_status
                         }
-        
+        logger.error(f"No command found with PID {pid}")
         raise GroupManagementError(f"No command found with PID {pid}")
 
     def find_command_by_pid(self, pid: int) -> Dict[str, Any]:
@@ -364,7 +377,7 @@ class GroupManager:
                             'command_name': command_name,
                             'command_details': command_details
                         }
-        
+        logger.error(f"No command found with PID {pid}")
         raise GroupManagementError(f"No command found with PID {pid}")
 
     def get_group_by_name(self, group_name: str) -> Optional[Dict[str, Any]]:
@@ -400,6 +413,6 @@ class GroupManager:
     def debug_print_groups(self):
         """Debug method to print all current groups."""
         data = self._read_file()
-        print("Current Groups:")
+        logger.debug("Current Groups: ")
         for uuid, group in data['groups'].items():
-            print(f"UUID: {uuid}, Name: {group['group_name']}")
+            logger.debug(f"UUID: {uuid}, Name: {group['group_name']}")

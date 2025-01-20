@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 from typing import List, Union
 import asyncio
 from fastapi import APIRouter
-from app.interface.process_manager import DomainCommandManager
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
@@ -22,7 +21,6 @@ from backend.app.api.monitor_endpoints.start_scan import stop_scans
 from backend.app.api.monitor_endpoints.start_scan import get_scan_state
 
 router = APIRouter()
-manager = DomainCommandManager()
 
 @router.get("")
 async def monitor():

@@ -1,6 +1,6 @@
-from app.interface.data_manager import GroupManager
+from backend.app.interface.json_data_manager import GroupManager
 from app.config.config import *
-data_manager_obj = GroupManager(data_file)
+# data_manager_obj = GroupManager(data_file)
 
 # import json
 # with open('groups.json') as f:
@@ -9,8 +9,18 @@ data_manager_obj = GroupManager(data_file)
 # for group_uuid in data['groups']:
 #     print(group_uuid)
 
-print(data_manager_obj._read_file())
+# # print(data_manager_obj._read_file())
+# import backend.app.services.scans.arrange_urls
+# # Get the file path of the module
+# module_path = backend.app.services.scans.arrange_urls.__file__
 
+# print(f"python3 {module_path}")
+
+from app.interface.process_manager import CommandExecutor
+
+a= CommandExecutor()
+
+a._update_process_status(544429, "killed")
 
 
 
