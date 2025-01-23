@@ -12,7 +12,7 @@ from app.config.config import root_Data_Dir
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
 from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
+logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = True)
 
 
 db_manager = DatabaseManager(db_config)
@@ -209,7 +209,6 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
 
         # Process endpoint input
         if endpoint:
-            endpoint = endpoint[0]
             current_data['url'] = endpoint
             try:
                 domain_name = get_domain_from_url(endpoint)
@@ -272,7 +271,7 @@ def get_domain_from_url(url):
         parsed_url = urlparse(url)
         # Ensure the URL has a valid scheme and netloc
         if not parsed_url.scheme or not parsed_url.netloc:
-            raise ValueError("Invalid URL provided")
+            logger.debug("Invalid URL provided")
         return parsed_url.netloc
     except Exception as e:
-        raise ValueError(f"Error parsing URL: {e}")
+        logger.debug(f"Error parsing URL: {e}")

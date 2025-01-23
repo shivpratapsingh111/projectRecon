@@ -29,7 +29,7 @@ async def monitor():
 
 @router.post("/new")
 async def api_add_new_endpoints(
-    endpoint: Union[List[str], None] = Form([]), 
+    endpoint: Union[str, None] = Form([]), 
     scan_name: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
     scan_options: Union[str, None] = Form(None),  # JSON string of selected scan options
@@ -43,8 +43,6 @@ async def api_get_scan_state():
 @router.get("/get-existing-programs")
 async def api_get_existing_programs():
     return await get_existing_programs()
-
-
 
 @router.post("/start-scans")
 async def api_start_scan():

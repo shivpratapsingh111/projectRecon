@@ -4,16 +4,11 @@ from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
 from backend.app.services.monitor_endpoints.service_monitor import monitor_endpoints
 from collections import defaultdict
 import requests
+from app.config.db_config import db_config
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 
-db_config = {
-    'dbname': 'test_monitor',
-    'user': 'postgres',
-    'password': 'postgres',
-    'host': 'localhost'
-}
 
 db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)

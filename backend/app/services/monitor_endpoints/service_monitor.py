@@ -2,6 +2,7 @@
 from .change_detector import EndpointChangeDetector
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+from app.config.db_config import db_config
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
@@ -239,12 +240,6 @@ class EndpointMonitor:
             await asyncio.gather(*workers)
 
 async def monitor_endpoints(urls: List[str], scan_name: str):
-    db_config = {
-        'dbname': 'test_monitor',
-        'user': 'postgres',
-        'password': 'postgres',
-        'host': 'localhost'
-    }
         
     monitor = EndpointMonitor(
         db_config=db_config,
