@@ -85,13 +85,13 @@ async def start_scan_for_group(scan_name, urls):
 
 async def schedule_scans():
     active_endpoints = get_endpoints_by_status("active")
-
+    logger.debug(f"Got {len(active_endpoints)} active endpoints.")
     if active_endpoints:
         grouped_endpoints = group_urls_by_scan_name(active_endpoints)
 
         for scan_name, urls in grouped_endpoints.items():
             await start_scan_for_group(scan_name, urls)
-            # send_telegram_message(f"Scan completed [{scan_name}] Count [{len(urls)}]")
+            send_telegram_message(f"Scan completed [{scan_name}] Count [{len(urls)}]")
     else:
         logger.warning("No Active endpoints found for scan")
         send_telegram_message("No Active endpoints found for scan")
@@ -106,7 +106,7 @@ async def run_periodic_scans():
         logger.info("Starting scheduled scans...")
         await schedule_scans()
         logger.info("Scheduled scans completed. Waiting for the next interval...")
-        await asyncio.sleep(5)  # 4 hours interval
+        await asyncio.sleep(10)  # 4 hours interval
     logger.info(f"Scan Satus {scan_status}")
     return
 

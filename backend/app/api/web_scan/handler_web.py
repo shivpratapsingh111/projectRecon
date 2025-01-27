@@ -44,7 +44,7 @@ async def websocket_get_all(websocket: WebSocket):
             result = manager.get_all_data()  # Get your data
             # Convert result to JSON string before sending
             await websocket.send_text(json.dumps(result))  # Send the result over the WebSocket
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
     except WebSocketDisconnect:
         logger.warning("Client disconnected")
     except Exception as e:
@@ -52,6 +52,14 @@ async def websocket_get_all(websocket: WebSocket):
         if not websocket.client_state.DISCONNECTED:
             await websocket.close()
 
+        
+@router.get("/get-all")
+async def api_get_all():
+    try:
+        result = manager.get_all_data()  # Get your data
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
 
 @router.post("/process-scan")
 async def process_scan(

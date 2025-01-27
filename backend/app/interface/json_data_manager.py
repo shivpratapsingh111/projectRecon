@@ -3,7 +3,10 @@ import json
 import uuid
 import os
 import inspect
+import fcntl
+from filelock import FileLock, Timeout
 
+import time
 from typing import Dict, Any, Optional
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='scan', enable_debug = True)
@@ -15,72 +18,75 @@ class GroupManagementError(Exception):
 
 class GroupManager:
     def __init__(self):
-        """
-        Initialize the GroupManager with a specific file path.
-        
-        Args:
-            file_path (str): Path to the JSON file storing group data
-        """
         self.file_path = data_file
+        self.lock_file_path = f"{self.file_path}.lock"
+        self.lock = FileLock(self.lock_file_path, timeout=10)
         self._initialize_file()
-    
+
     def _initialize_file(self):
         """Create or verify JSON file with proper initial structure."""
-
         initial_data = {"groups": {}}
-
-        # Ensure the directory exists
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
 
-        if not os.path.exists(self.file_path):
-            # Create the file with the initial structure if it doesn't exist
-            self._write_to_file(initial_data)
-            logger.debug(f"Data file initialized {self.file_path}")
-        else:
-            logger.debug(f"Json Data file exists {self.file_path}")
-            try:
-                with open(self.file_path, 'r') as f:
-                    data = json.load(f)
-
-                # Validate the existing data structure
-                if not isinstance(data, dict) or "groups" not in data:
-                    logger.error(f"Json data file exists, but is corrupted {self.file_path}")
-            except (json.JSONDecodeError, IOError):
-                logger.error(f"Json data file is corrupted {self.file_path}")
-                logger.error(f"Something went wrong while processing existing json data file {self.file_path}")
-                
-
-
-
-    def _write_to_file(self, data):
-        """Write data to the file."""
         try:
-            with open(self.file_path, 'w') as f:
-                json.dump(data, f, indent=2)
-            # logger.debug(f"Data written to {self.file_path}")
-        except IOError as e:
-            logger.exception(f"Error writing in {self.file_path}")
-            raise GroupManagementError(f"Error writing to file: {e}")
-    
-    def _read_file(self) -> Dict[str, Any]:
-        """
-        Read and parse the JSON file.
+            with self.lock:
+                if not os.path.exists(self.file_path):
+                    with open(self.file_path, 'w', encoding='utf-8') as f:
+                        json.dump(initial_data, f, indent=2)
+                    logger.debug(f"Data file initialized {self.file_path}")
+                else:
+                    self._validate_file()
+        except Timeout:
+            logger.error(f"Could not acquire lock for {self.file_path} within the timeout period")
+            raise GroupManagementError("Lock acquisition timeout")
 
-        Returns:
-            Dict: Parsed JSON data
-        """
+    def _validate_file(self):
+        """Validate the existing file structure."""
         try:
-            with open(self.file_path, 'r') as f:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
-                    logger.warning(f"JSON file {self.file_path} is empty when read.")
-                    return {"groups": {}}  # Return default structure if empty
-                
+                    logger.warning(f"Empty file found, reinitializing {self.file_path}")
+                    self._write_to_file({"groups": {}})
+                    return
+
                 data = json.loads(content)
-                return data
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logger.exception(f"Error reading {self.file_path}: {e}")
-            raise GroupManagementError(f"Error reading file: {e}")
+                if not isinstance(data, dict) or "groups" not in data:
+                    logger.error(f"Invalid data structure in {self.file_path}")
+                    raise GroupManagementError("Invalid data structure")
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error validating file {self.file_path}: {e}")
+            raise GroupManagementError(f"File validation error: {e}")
+
+    def _write_to_file(self, data: Dict[str, Any]):
+        """Write data to file with proper locking."""
+        try:
+            with self.lock:
+                with open(self.file_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2)
+        except Timeout:
+            logger.error("Lock acquisition timeout during write operation")
+            raise GroupManagementError("Write operation timeout")
+        except IOError as e:
+            logger.error(f"Error writing to file: {e}")
+            raise GroupManagementError(f"Write error: {e}")
+
+    def _read_file(self) -> Dict[str, Any]:
+        """Read data from file with proper locking."""
+        try:
+            with self.lock:
+                with open(self.file_path, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    if not content:
+                        logger.warning(f"Empty file found during read {self.file_path}")
+                        return {"groups": {}}
+                    return json.loads(content)
+        except Timeout:
+            logger.error("Lock acquisition timeout during read operation")
+            raise GroupManagementError("Read operation timeout")
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error reading file: {e}")
+            raise GroupManagementError(f"Read error: {e}")
 
         
     def create_group(self, group_name: str) -> str:
@@ -98,6 +104,7 @@ class GroupManager:
         # Check if group name already exists
         for group_uuid, group in data['groups'].items():
             if group['group_name'] == group_name:
+                logger.debug(f"Group {group_name} already exists with id {group_uuid}")
                 return group_uuid
         
         # Create new group if it doesn't exist

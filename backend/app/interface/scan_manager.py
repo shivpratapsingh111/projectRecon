@@ -8,7 +8,7 @@ from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
 from app.logger.logger import setup_logger
 from app.config.db_config import db_config
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = False)
+logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
 
 db_manager = DatabaseManager(db_config)
@@ -42,9 +42,21 @@ def start_scan(group_name, domain_list, execution_style, scan_list):
     targets_file = f"{target_dir}/targets.txt"
     
     # Write domain list to file
-    with open(targets_file, 'w') as f:
-        for domain in domain_list:
-            f.write(domain.strip() + "\n")
+    # with open(targets_file, 'a') as f:
+    #     for domain in domain_list:
+    #         f.write(domain.strip() + "\n")
+
+    existing_domains = set()
+    if os.path.exists(targets_file):
+        with open(targets_file, 'r') as f:
+            existing_domains = set(line.strip() for line in f.readlines())
+    # Add new domains to the set
+    existing_domains.update(domain.strip() for domain in domain_list)
+    # Write the unique domains back to the file
+    with open(targets_file, 'a') as f:
+        for domain in sorted(existing_domains):  # Sorting if desired, otherwise remove `sorted`
+            f.write(domain + "\n")
+            
     logger.debug(f"Written domains to file: {targets_file}")
     # Define the actions and their respective functions
     actions = {
@@ -87,7 +99,7 @@ def start_scan(group_name, domain_list, execution_style, scan_list):
     # Step 2: Execute remaining scans in any order
     for scan in scan_list:
         if scan not in completed_scans:  # Skip already executed scans
-            logger.debug(f"Scan {scan} is laready completed")
+            # logger.debug(f"Scan {scan} is aready completed")
             if scan in actions:
                 logger.debug(f"Calling {scan}({group_name, domain_list, execution_style})")
                 actions[scan](group_name, domain_list, execution_style)  # Execute the scan

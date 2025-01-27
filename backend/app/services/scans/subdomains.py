@@ -1,9 +1,18 @@
-import datetime, time, subprocess
+import subprocess
+import psycopg2
+from psycopg2.extras import execute_values
+import uuid
+
 from app.config.config  import *
+from app.config.db_config  import db_config
 from backend.app.interface.process_manager import run_commands
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
+from app.db.db_manager import DatabaseManager
+from app.db.db_operations import DatabaseOperations
+db_manager = DatabaseManager(db_config)
+db_ops = DatabaseOperations(db_manager)
 
 group_results = {}
 
@@ -17,33 +26,57 @@ def organise_subdomains(group_name, domain_list):
         if os.path.exists(f"{result_dir}/{active_CombinedSubdomainResults}"):
 
             commands = [
-                ("Organising Subdomains - 1", f"""cat {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{active_CombinedSubdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {result_dir}/{subdomainResults}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+                (
+                    "Organising_Subdomains", 
+                    f"""cat {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{active_CombinedSubdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {result_dir}/{subdomainResults}""", 
+                    f"{root_Data_Dir}/{group_name}/{central_log_file}", 
+                    f"{root_Data_Dir}/{group_name}/{central_log_file}"
+                )
             ]
 
             # Execute commands and store the result
             group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-            logger.debug(f"Organising Subdomains - 1 (first step) [Completed] [{domain}]")
+            logger.debug(f"Organising Subdomains [Completed] [{domain}]")
 
 
         else:
             commands = [
-                ("Organising Subdomains - 2", f"cp {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{subdomainResults}", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+                (
+                    "Organising_Subdomains", 
+                    f"""cp {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{subdomainResults} && cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", 
+                    f"{root_Data_Dir}/{group_name}/{central_log_file}", 
+                    f"{root_Data_Dir}/{group_name}/{central_log_file}"
+                )
             ]
 
             # Execute commands and store the result
             group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-            logger.debug(f"Organising Subdomains - 2 (second step) [Completed] [{domain}]")
+            logger.debug(f"Organising Subdomains [Completed] [{domain}]")
 
-            commands = [
-                ("Organising Subdomains - 3", f"""cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
-            ]
+            # commands = [
+            #     ("Organising Subdomains - 3", f"""cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+            # ]
 
-            # Execute commands and store the result
-            group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
+            # # Execute commands and store the result
+            # group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
-        logger.info(f"Organising Subdomains completed - 3 (last step) [{domain}]")
+            # logger.debug(f"Organising Subdomains completed - 3 (last step) [{domain}]")
+
+
+        commands = [
+            (
+                "Httpx", 
+                f"""cat {result_dir}/{subdomainResults} | httpx -server -td -sc -title -silent -json -o {result_dir}/httpx_subdomains.json 2> /dev/null && cat {result_dir}/httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {result_dir}/{liveSubdomains_SubdomainResults}""", 
+                f"{root_Data_Dir}/{group_name}/{central_log_file}", 
+                f"{root_Data_Dir}/{group_name}/{central_log_file}"
+            )
+        ]
+        # Execute commands and store the result
+        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
+
+        logger.debug(f"Httpx [Completed] [{domain}]")
 
 
 def screenshot_subdomains(group_name, domain_list):
@@ -131,19 +164,88 @@ def func_subdomains_ac(group_name, domain_list, execution_style):
 
     return group_results
 
+def check_and_insert_program(domain_list):
 
+    for program in domain_list:
+        program_data = {
+        "program_name": program,
+        "program_url": None,
+        "acquisitions": [""],
+        "email": None,
+        "report_form": None
+        }
+        exists = db_ops.query_operations().check_program_exists(program)
+        if exists:
+            logger.debug("Program exists")
+            return
+        else:
+            program_id = db_ops.insert_operations().insert_program(program_data)
+            logger.debug(f"New program created with id {program_id}")
+            return program_id
+
+def read_subdomains_from_file(file_path):
+    with open(file_path, "r") as file:
+        return [line.strip() for line in file if line.strip()]
+
+
+def update_subdomains_to_db(group_name, domain_list):
+    result_dir = None
+    batch_size=10000
+    insert_query = """
+        INSERT INTO web_targets (program_id, target_domain) 
+        VALUES %s 
+        ON CONFLICT (target_domain) DO NOTHING
+    """
+    for domain in domain_list:
+        
+        file_path = f"{root_Data_Dir}/{group_name}/{domain}/subdomains/subdomains.txt"
+
+        if os.path.exists(file_path):
+            subdomains = read_subdomains_from_file(file_path)
+            program_id = db_ops.query_operations().get_program_id(domain)
+            program_id_str = uuid.UUID(program_id[0][0])
+            program_id = str(program_id_str)
+            logger.debug(f"Program ID fetched: {program_id}")
+
+
+            with psycopg2.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    # Process subdomains in chunks to handle large data
+                    for i in range(0, len(subdomains), batch_size):
+                        chunk = subdomains[i:i + batch_size]
+                        values = [(str(program_id), sub) for sub in chunk]  # Convert UUID to string
+                        
+                        execute_values(cursor, insert_query, values)
+                        logger.debug(f"Inserted {len(values)} records...")
+                    
+                    conn.commit()
+                    logger.debug(f"All subdomains processed successfully. [Count: {len(subdomains)}]")
+
+            
 
 def func_subdomains_both(group_name, domain_list, execution_style):
+    logger.debug("Checking program details in DB")
+    check_and_insert_program(domain_list)
+    
     logger.debug("Executing: func_subdomains_both")
     func_subdomains_ps(group_name, domain_list, execution_style)
     func_subdomains_ac(group_name, domain_list, execution_style)
     organise_subdomains(group_name,domain_list)
+    
+    update_subdomains_to_db(group_name, domain_list)
+    
     screenshot_subdomains(group_name, domain_list)
 
 
 def func_subdomains_ps_only(group_name, domain_list, execution_style):
+    logger.debug("Checking program details in DB")
+    check_and_insert_program(domain_list)
+    
     logger.debug("Executing: func_subdomains_ps_only")
     func_subdomains_ps(group_name, domain_list, execution_style)
     logger.debug("Passive Subdomain Enumeration completed")
     organise_subdomains(group_name,domain_list)
+    
+    update_subdomains_to_db(group_name, domain_list)
+    
     screenshot_subdomains(group_name, domain_list)

@@ -8,7 +8,7 @@ from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 
 
-from aiohttp.client_exceptions import ClientConnectionError
+from aiohttp import ClientSession, ClientTimeout, ClientConnectorError, ClientOSError, ServerTimeoutError, ClientSSLError
 from aiohttp import ClientSession, ClientTimeout
 from urllib.parse import urlparse
 from datetime import datetime
@@ -18,6 +18,7 @@ import mimetypes
 import aiohttp
 import asyncio
 import hashlib
+import socket
 import random
 import ssl
 import os
@@ -33,7 +34,7 @@ ROOT_DATA_DIR = os.path.expanduser("~/projectRecon-Data/").rstrip('/')
 MAX_CONCURRENT_REQUESTS = 10
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2
-TIMEOUT = 10
+TIMEOUT = 3
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -106,17 +107,49 @@ class EndpointMonitor:
     async def make_request(self, session: ClientSession, url: str) -> Optional[aiohttp.ClientResponse]:
         for attempt in range(MAX_RETRIES):
             try:
-                return await session.get(url, timeout=TIMEOUT)
-            except (ClientTimeout, ClientConnectionError) as e:
-                wait_time = RETRY_BACKOFF ** attempt
-                logger.warning(f"Error fetching {url}: {str(e)}. Retrying in {wait_time}s...")
+                logger.debug(f"Making request for {url} (Attempt {attempt + 1})")
+
+                # Preemptively resolve the host to catch early DNS failures
+                host = url.split("//")[-1].split("/")[0]
+                try:
+                    ip = socket.gethostbyname(host)
+                    logger.debug(f"Resolved {host} to {ip}")
+                except socket.gaierror:
+                    logger.error(f"DNS resolution failed for {host}")
+                    return None
+                
+                async with session.get(url) as response:
+                    logger.debug(f"Got response for {url} with status {response.status}")
+                    return await response
+                # If the response is received successfully
+                return response
+
+            except asyncio.TimeoutError:
+                wait_time = min(RETRY_BACKOFF ** attempt, 30)
+                logger.warning(f"Timeout fetching {url}. Retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
+
+            except ServerTimeoutError:
+                wait_time = min(RETRY_BACKOFF ** attempt, 30)
+                logger.warning(f"Timeout fetching {url}. Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+
+            except ClientTimeout:
+                wait_time = min(RETRY_BACKOFF ** attempt, 30)
+                logger.warning(f"Timeout fetching {url}. Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            
+            except asyncio.CancelledError:
+                logger.error(f"Request to {url} was cancelled, possibly due to shutdown.")
+                break  # Handle task cancellation gracefully
+
             except Exception as e:
                 logger.exception(f"Unexpected error fetching {url}: {str(e)}")
-                return None
-        
-        logger.error(f"Max retries reached for {url}")
+                break  # Avoid infinite retries on unknown errors
+
+        logger.error(f"Max retries reached for {url}, request failed.")
         return None
+
 
     async def get_program_and_target_id(self, url):
             logger.info(f"Getting Program and Target Id for {url}")
@@ -223,18 +256,21 @@ class EndpointMonitor:
             
         logger.info(f"Processing {len(valid_urls)} valid endpoints")
 
-        async with aiohttp.ClientSession(
-            headers=self.generate_headers(),
-            connector=aiohttp.TCPConnector(ssl=self.get_ssl_context())
-        ) as session:
+
+        timeout = aiohttp.ClientTimeout(total=TIMEOUT)
+        # Disable SSL verification
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        async with aiohttp.ClientSession(timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
             workers = [
                 asyncio.create_task(self.worker(i, queue, session, scan_name))
                 for i in range(MAX_CONCURRENT_REQUESTS)
             ]
-
             await queue.join()
-            
-            # Cleanup workers
+
+            # Ensure workers are done and session is properly closed
             for _ in workers:
                 await queue.put(None)
             await asyncio.gather(*workers)

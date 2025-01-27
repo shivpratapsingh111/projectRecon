@@ -308,6 +308,7 @@ class EndpointQueryOperations:
         except Exception as e:
             logger.exception(f"Failed to get mobile target data: {str(e)}")
             raise
+        
     def get_program_name(self, program_id) -> List[Dict]:
         """Get program name from program id
         """
@@ -319,4 +320,17 @@ class EndpointQueryOperations:
                 return None
         except Exception as e:
             logger.exception(f"Failed to get program name for [{program_id}]: {str(e)}")
+            raise
+
+    def get_program_id(self, program_name) -> List[Dict]:
+        """Get program name from program id
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_PROGRAM_ID, (program_name,))
+            if result != []:
+                return result
+            else:
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to get program id for [{program_name}]: {str(e)}")
             raise

@@ -175,6 +175,12 @@ class QueryManager:
         FROM programs
         WHERE id = %s
     """
+    GET_PROGRAM_ID = """
+        SELECT 
+            id
+        FROM programs
+        WHERE program_name = %s
+    """
     
     # --- Report ---
     GET_PROGRAM_DATA_BY_ID = """
