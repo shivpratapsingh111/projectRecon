@@ -16,10 +16,12 @@ db_ops = DatabaseOperations(db_manager)
 
 group_results = {}
 
+ROOT_DATA_DIR = root_Data_Dir
+
 def organise_subdomains(group_name, domain_list):
 
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
 
         logger.debug(f"Starting to organise Subdomain Enum for {domain}")
 
@@ -29,12 +31,11 @@ def organise_subdomains(group_name, domain_list):
                 (
                     "Organising_Subdomains", 
                     f"""cat {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{active_CombinedSubdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {result_dir}/{subdomainResults}""", 
-                    f"{root_Data_Dir}/{group_name}/{central_log_file}", 
-                    f"{root_Data_Dir}/{group_name}/{central_log_file}"
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
                 )
             ]
 
-            # Execute commands and store the result
             group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
             logger.debug(f"Organising Subdomains [Completed] [{domain}]")
@@ -45,35 +46,24 @@ def organise_subdomains(group_name, domain_list):
                 (
                     "Organising_Subdomains", 
                     f"""cp {result_dir}/{passive_CombinedSubdomainResults} {result_dir}/{subdomainResults} && cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", 
-                    f"{root_Data_Dir}/{group_name}/{central_log_file}", 
-                    f"{root_Data_Dir}/{group_name}/{central_log_file}"
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
                 )
             ]
 
-            # Execute commands and store the result
             group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
     
             logger.debug(f"Organising Subdomains [Completed] [{domain}]")
-
-            # commands = [
-            #     ("Organising Subdomains - 3", f"""cat {result_dir}/{subdomainResults} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u -o {result_dir}/{subdomainResults}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
-            # ]
-
-            # # Execute commands and store the result
-            # group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
-    
-            # logger.debug(f"Organising Subdomains completed - 3 (last step) [{domain}]")
-
 
         commands = [
             (
                 "Httpx", 
                 f"""cat {result_dir}/{subdomainResults} | httpx -server -td -sc -title -silent -json -o {result_dir}/httpx_subdomains.json 2> /dev/null && cat {result_dir}/httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {result_dir}/{liveSubdomains_SubdomainResults}""", 
-                f"{root_Data_Dir}/{group_name}/{central_log_file}", 
-                f"{root_Data_Dir}/{group_name}/{central_log_file}"
+                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
+                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
             )
         ]
-        # Execute commands and store the result
+
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
 
         logger.debug(f"Httpx [Completed] [{domain}]")
@@ -82,11 +72,11 @@ def organise_subdomains(group_name, domain_list):
 def screenshot_subdomains(group_name, domain_list):
     for domain in domain_list:
         logger.debug(f"Screenshoting for {domain}")
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains/screenshots"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/screenshots"
         os.makedirs(result_dir, exist_ok=True) # Making a directory for each domain passed as targets
 
         commands = [
-            ("Screenshot Subdomains", f"cd {root_Data_Dir}/{group_name}/{domain}/subdomains && nuclei -l {root_Data_Dir}/{group_name}/{domain}/subdomains/{subdomainResults} -headless -t ~/nuclei-templates/headless/screenshot.yaml -c 100", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+            ("Screenshot Subdomains", f"cd {ROOT_DATA_DIR}/{group_name}/{domain}/subdomains && nuclei -l {ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/{subdomainResults} -headless -t ~/nuclei-templates/headless/screenshot.yaml -c 100", f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
@@ -101,13 +91,28 @@ def func_subdomains_ps(group_name, domain_list, execution_style):
     
     # Execute commands for a group of domains
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         os.makedirs(result_dir, exist_ok=True)
-        os.makedirs(f"{root_Data_Dir}/{group_name}/{domain}/subdomains/logs", exist_ok=True)
+        os.makedirs(f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/logs", exist_ok=True)
+        
+        bbot_cmd = f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} -s --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv dnstlsrpt github_codesearch github_org httpx hunterio internetdb ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar subdomains --exclude-modules dnsbrute dnsbrute_mutations wayback" # for bbot output file will be {result_dir}/bbot/subdomains.txt
+        subdominator_cmd = f"subdominator -d {domain} --silent --no-color --disable-update-check -o {result_dir}/{subdominator}"
+        subfinder_cmd = f"subfinder -d {domain} -sources chinaz,columbus,github,hunter,robtex,threatbook,whoisxmlapi -silent -no-color -disable-update-check -o {result_dir}/{subfinder}"
+        cero_cmd = f"cero {domain} | tee -a {result_dir}/{cero}"
+        sublist3r_cmd = f"cd ~/tools/Sublist3r && python3 sublist3r.py -d {domain} -o {result_dir}/{sublist3r}"
+        yass_cmd = f"yass {domain} -nc | tee -a {result_dir}/{yass}"
+        githubsubdomains_cmd = f"github-subdomains -d {domain} -raw -o {result_dir}/{githubsubdomains}"
+        gitlabsubdomains_cmd = f"github-subdomains -d {domain} | tee -a {result_dir}/{gitlabsubdomains}"
+
         commands = [
-            ("assetfinder", f"echo {domain} | assetfinder", f"{result_dir}/{assetfinder_Passive_SubdomainResults}", f"{result_dir}/logs/{assetfinder_Passive_SubdomainResults}"),
-            ("subfinder", f"echo {domain}  | subfinder", f"{result_dir}/{subfinder_Passive_SubdomainResults}", f"{result_dir}/logs/{subfinder_Passive_SubdomainResults}"),
-            ("subdominator", f"subdominator -d {domain}", f"{result_dir}/{subdominator_Passive_SubdomainResults}", f"{result_dir}/logs/{subdominator_Passive_SubdomainResults}")
+            ("bbot", f"{bbot_cmd}", f"{result_dir}/logs/{bbot.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{bbot.removesuffix(".txt")}_stderr"),
+            ("subdominator", f"{subdominator_cmd}", f"{result_dir}/logs/{subdominator.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{subdominator.removesuffix(".txt")}_stderr"),
+            ("subfinder", f"{subfinder_cmd}", f"{result_dir}/logs/{subfinder.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{subfinder.removesuffix(".txt")}_stderr"),
+            ("cero", f"{cero_cmd}", f"{result_dir}/logs/{cero.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{cero.removesuffix(".txt")}_stderr"),
+            ("sublist3r", f"{sublist3r_cmd}", f"{result_dir}/logs/{sublist3r.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{sublist3r.removesuffix(".txt")}_stderr"),
+            ("yass", f"{yass_cmd}", f"{result_dir}/logs/{yass.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{yass.removesuffix(".txt")}_stderr"),
+            ("githubsubdomains", f"{githubsubdomains_cmd}", f"{result_dir}/logs/{githubsubdomains.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{githubsubdomains.removesuffix(".txt")}_stderr"),
+            ("gitlabsubdomains", f"{gitlabsubdomains_cmd}", f"{result_dir}/logs/{gitlabsubdomains.removesuffix(".txt")}_stdout", f"{result_dir}/logs/{gitlabsubdomains.removesuffix(".txt")}_stderr")
         ]
         
         # Execute commands and store the result
@@ -115,10 +120,20 @@ def func_subdomains_ps(group_name, domain_list, execution_style):
  
 
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
 
-        command = f"cat {result_dir}/{assetfinder_Passive_SubdomainResults} {result_dir}/{subfinder_Passive_SubdomainResults} {result_dir}/{subdominator_Passive_SubdomainResults} | sort -u >> {result_dir}/{passive_CombinedSubdomainResults}" # Combining passive results
-        with open(f"{root_Data_Dir}/{group_name}/{central_log_file}" , "a") as writeLog:
+        command = f"cp {result_dir}/bbot/subdomains.txt {result_dir}/{bbot}" # Getting bbot results
+        with open(f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}" , "a") as writeLog:
+            process = subprocess.Popen(
+                command,
+                # stdout=writeLog,
+                stderr=writeLog,
+                shell=True,
+            )
+            process.wait()        
+
+        command = f"cd {result_dir} && cat {bbot} {subdominator} {subfinder} {cero} {sublist3r} {yass} {githubsubdomains} {gitlabsubdomains} | sort -u >> {passive_CombinedSubdomainResults}" # Combining passive results
+        with open(f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}" , "a") as writeLog:
             process = subprocess.Popen(
                 command,
                 # stdout=writeLog,
@@ -136,7 +151,7 @@ def func_subdomains_ac(group_name, domain_list, execution_style):
     
     # Execute commands for a group of domains
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         os.makedirs(result_dir, exist_ok=True)
         
         # First command: alterx processing
@@ -149,7 +164,7 @@ def func_subdomains_ac(group_name, domain_list, execution_style):
 
     # Execute DNS resolver commands
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/subdomains"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         
         # Second command: DNS resolver
         commands = [
@@ -198,7 +213,7 @@ def update_subdomains_to_db(group_name, domain_list):
     """
     for domain in domain_list:
         
-        file_path = f"{root_Data_Dir}/{group_name}/{domain}/subdomains/subdomains.txt"
+        file_path = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/subdomains.txt"
 
         if os.path.exists(file_path):
             subdomains = read_subdomains_from_file(file_path)
@@ -249,3 +264,4 @@ def func_subdomains_ps_only(group_name, domain_list, execution_style):
     update_subdomains_to_db(group_name, domain_list)
     
     screenshot_subdomains(group_name, domain_list)
+    
