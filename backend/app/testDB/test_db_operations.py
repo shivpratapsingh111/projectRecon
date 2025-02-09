@@ -1,5 +1,5 @@
 from app.testDB.not_needed.db_manager import DatabaseManager
-from backend.app.testDB.not_needed.db_operations import DatabaseOperations
+from app.testDB.not_needed.db_operations import DatabaseOperations
 
 db_config = {
     'dbname': 'test_monitor',

@@ -1,8 +1,8 @@
 from app.config.config  import *
 import os
 import subprocess
-import backend.app.services.scans.arrange_urls
-from backend.app.interface.process_manager import run_commands
+import app.services.scans.arrange_urls
+from app.interface.process_manager import run_commands
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
@@ -95,7 +95,7 @@ def organise_urls(group_name, domain_list):
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
 
         commands = [
-            ("Arranging Urls", f"python3 {backend.app.services.scans.arrange_urls.__file__} {result_dir}/{urlResults} {result_dir}/{urlsArranged200} {result_dir}/{urlsArrangedAll}", f"{root_Data_Dir}/{group_name}/urlsArrange_stdout", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+            ("Arranging Urls", f"python3 {app.services.scans.arrange_urls.__file__} {result_dir}/{urlResults} {result_dir}/{urlsArranged200} {result_dir}/{urlsArrangedAll}", f"{root_Data_Dir}/{group_name}/urlsArrange_stdout", f"{root_Data_Dir}/{group_name}/{central_log_file}")
         ]
         # Execute commands and store the result
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")

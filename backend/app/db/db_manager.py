@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import psycopg2
 
 # ===[Local Imports]===
-from backend.app.testDB.not_needed.db_queries import QueryManager
+from app.testDB.not_needed.db_queries import QueryManager
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 

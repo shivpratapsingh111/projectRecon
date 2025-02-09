@@ -7,8 +7,8 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import Json
 
-from backend.app.testDB.not_needed.db_queries import QueryManager
-from backend.app.testDB.not_needed.db_manager import DatabaseManager
+from app.testDB.not_needed.db_queries import QueryManager
+from app.testDB.not_needed.db_manager import DatabaseManager
 
 # from db_manager import DatabaseManager
 # from db_queries import QueryManager

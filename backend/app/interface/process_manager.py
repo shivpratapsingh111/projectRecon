@@ -7,7 +7,7 @@ import json
 from filelock import FileLock
 from datetime import datetime
 from typing import List, Tuple, Literal, Dict
-from backend.app.interface.json_data_manager import GroupManager
+from app.interface.json_data_manager import GroupManager
 from app.config.config import root_Data_Dir
 from app.logger.logger import setup_logger
 

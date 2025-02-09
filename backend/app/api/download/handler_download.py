@@ -4,7 +4,7 @@ from app.api.download.get_download_ready import get_group_scan
 from fastapi import APIRouter
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from backend.app.interface.process_manager import CommandExecutor
+from app.interface.process_manager import CommandExecutor
 import json
 
 from app.logger.logger import setup_logger

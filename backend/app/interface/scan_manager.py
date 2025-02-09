@@ -1,8 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from app.config.config  import *
-from backend.app.services.scans.urls import func_urls_both
-from backend.app.services.scans.subdomains import func_subdomains_both
-from backend.app.services.scans.subdomains import func_subdomains_ps_only
+from app.services.scans.urls import func_urls_both
+from app.services.scans.subdomains import func_subdomains_both
+from app.services.scans.subdomains import func_subdomains_ps_only
 import os
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations

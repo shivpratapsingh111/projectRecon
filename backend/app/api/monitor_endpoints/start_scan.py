@@ -1,7 +1,7 @@
 import asyncio
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from backend.app.services.monitor_endpoints.service_monitor import monitor_endpoints
+from app.services.monitor_endpoints.service_monitor import monitor_endpoints
 from collections import defaultdict
 import urllib.parse
 import urllib.request

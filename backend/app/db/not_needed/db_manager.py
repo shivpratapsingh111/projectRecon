@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import Json
 import logging
 from datetime import datetime
-from backend.app.testDB.not_needed.db_queries import QueryManager
+from app.testDB.not_needed.db_queries import QueryManager
 # from db_queries import QueryManager
 
 

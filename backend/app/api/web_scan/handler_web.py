@@ -5,7 +5,7 @@ from typing import List, Optional, Union, Dict
 from pydantic import BaseModel
 import uvicorn, asyncio, time
 from fastapi import APIRouter
-from backend.app.interface.process_manager import CommandExecutor
+from app.interface.process_manager import CommandExecutor
 from fastapi import WebSocket, WebSocketDisconnect
 import json
 

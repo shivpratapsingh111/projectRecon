@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 import os
-from backend.app.interface.process_manager import CommandExecutor
+from app.interface.process_manager import CommandExecutor
 import zipfile, time
 from app.config.config import root_Data_Dir
 from app.logger.logger import setup_logger

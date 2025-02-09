@@ -8,18 +8,18 @@ from fastapi import APIRouter
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 
-from backend.app.api.monitor_endpoints.endpoint_db_manager import add_new_endpoints
-from backend.app.api.monitor_endpoints.endpoint_db_manager import get_review_endpoints
-from backend.app.api.monitor_endpoints.endpoint_db_manager import get_response_body_changes
-from backend.app.api.monitor_endpoints.endpoint_db_manager import mark_review_endpoints
-from backend.app.api.monitor_endpoints.endpoint_db_manager import get_endpoints_by_status
-from backend.app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_status
-from backend.app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_scan_interval
-from backend.app.api.monitor_endpoints.endpoint_db_manager import get_existing_programs
-from backend.app.api.monitor_endpoints.endpoint_db_manager import get_existing_scans
-from backend.app.api.monitor_endpoints.start_scan import run_periodic_scans
-from backend.app.api.monitor_endpoints.start_scan import stop_scans
-from backend.app.api.monitor_endpoints.start_scan import get_scan_state
+from app.api.monitor_endpoints.endpoint_db_manager import add_new_endpoints
+from app.api.monitor_endpoints.endpoint_db_manager import get_review_endpoints
+from app.api.monitor_endpoints.endpoint_db_manager import get_response_body_changes
+from app.api.monitor_endpoints.endpoint_db_manager import mark_review_endpoints
+from app.api.monitor_endpoints.endpoint_db_manager import get_endpoints_by_status
+from app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_status
+from app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_scan_interval
+from app.api.monitor_endpoints.endpoint_db_manager import get_existing_programs
+from app.api.monitor_endpoints.endpoint_db_manager import get_existing_scans
+from app.api.monitor_endpoints.start_scan import run_periodic_scans
+from app.api.monitor_endpoints.start_scan import stop_scans
+from app.api.monitor_endpoints.start_scan import get_scan_state
 
 router = APIRouter()
 

@@ -8,14 +8,14 @@ from fastapi import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.db_manager import DatabaseManager
-from backend.app.api.mail_reports import handler_report
-from backend.app.api.add import handler_add
-from backend.app.api.monitor_endpoints import handler_monitor
-from backend.app.api.results import handler_results
+from app.api.mail_reports import handler_report
+from app.api.add import handler_add
+from app.api.monitor_endpoints import handler_monitor
+from app.api.results import handler_results
 
 from app.config.db_config import db_config
-from backend.app.api.web_scan import handler_web
-from backend.app.api.download import handler_download
+from app.api.web_scan import handler_web
+from app.api.download import handler_download
 
 db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
 

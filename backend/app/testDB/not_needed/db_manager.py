@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 # from app.testDB.db_queries import QueryManager
 
-from backend.app.testDB.not_needed.db_queries import QueryManager
+from app.testDB.not_needed.db_queries import QueryManager
 # from db_queries import QueryManager
 
 

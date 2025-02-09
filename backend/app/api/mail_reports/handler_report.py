@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter
 
 
-from backend.app.services.mail_reports.report import *
+from app.services.mail_reports.report import *
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='mail_reports', enable_debug = False)

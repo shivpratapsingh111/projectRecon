@@ -1,4 +1,4 @@
-# from backend.app.interface.json_data_manager import GroupManager
+# from app.interface.json_data_manager import GroupManager
 # from app.config.config import *
 # data_manager_obj = GroupManager(data_file)
 
@@ -10,9 +10,9 @@
 #     print(group_uuid)
 
 # # print(data_manager_obj._read_file())
-# import backend.app.services.scans.arrange_urls
+# import app.services.scans.arrange_urls
 # # Get the file path of the module
-# module_path = backend.app.services.scans.arrange_urls.__file__
+# module_path = app.services.scans.arrange_urls.__file__
 
 # print(f"python3 {module_path}")
 

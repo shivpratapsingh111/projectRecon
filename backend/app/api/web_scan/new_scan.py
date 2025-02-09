@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 import json
-from backend.app.interface.scan_manager import start_scan
+from app.interface.scan_manager import start_scan
 
 async def new_scan(domain, groupName, file, execution_style, scanOptions):
     try:

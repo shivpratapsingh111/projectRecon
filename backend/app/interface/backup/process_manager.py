@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Assuming these imports exist in your project
 from app.config.config import *
-from backend.app.interface.json_data_manager import GroupManager
+from app.interface.json_data_manager import GroupManager
 from app.logger.logger import setup_logger
 
 logger = setup_logger(__name__, log_file_path='scan', enable_debug=True)

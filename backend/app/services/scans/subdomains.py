@@ -5,7 +5,7 @@ import uuid
 
 from app.config.config  import *
 from app.config.db_config  import db_config
-from backend.app.interface.process_manager import run_commands
+from app.interface.process_manager import run_commands
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
