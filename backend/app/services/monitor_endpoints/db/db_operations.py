@@ -199,6 +199,14 @@ class EndpointQueryOperations:
         except Exception as e:
             logger.exception(f"Failed to get endpoints: {str(e)}")
             raise
+    def get_all_scannames(self) -> List[Dict]:
+        """Get all scan names"""
+        try:
+            result = self.db.execute_query(QueryManager.SELECT_ALL_SCANNAMES, None)
+            return result
+        except Exception as e:
+            logger.exception(f"Failed to get scan names: {str(e)}")
+            raise
     def get_target_and_program_id(self, target_domain) -> List[Dict]:
         """Get target and program id for the endpoint"""
         try:

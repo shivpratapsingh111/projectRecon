@@ -62,6 +62,9 @@ class QueryManager:
     SELECT_ALL_PROGRAMS = """
         SELECT * FROM programs
     """
+    SELECT_ALL_SCANNAMES = """
+        SELECT scan_name FROM monitor_endpoints 
+    """
     GET_NEED_REVIEW_ENDPOINTS = """
         SELECT
             id,

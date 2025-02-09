@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List, Dict, Any
 import mimetypes
 import aiohttp
+import requests
 import asyncio
 import hashlib
 import socket
@@ -34,7 +35,7 @@ ROOT_DATA_DIR = os.path.expanduser("~/projectRecon-Data/").rstrip('/')
 MAX_CONCURRENT_REQUESTS = 10
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2
-TIMEOUT = 3
+TIMEOUT = 10
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -95,10 +96,7 @@ class FileManager:
         return old_path, new_path
 
 class EndpointMonitor:
-    def __init__(self, db_config: dict, urls_file: str, check_interval: int):
-        self.urls_file = urls_file
-        self.check_interval = check_interval
-        
+    def __init__(self, db_config: dict):        
         self.db_manager = DatabaseManager(db_config)
         self.db_ops = DatabaseOperations(self.db_manager)
         self.change_detector = EndpointChangeDetector(self.db_ops)
@@ -120,9 +118,8 @@ class EndpointMonitor:
                 
                 async with session.get(url) as response:
                     logger.debug(f"Got response for {url} with status {response.status}")
-                    return await response
-                # If the response is received successfully
-                return response
+                    content = await response.read()
+                    return response.status, response.headers, content
 
             except asyncio.TimeoutError:
                 wait_time = min(RETRY_BACKOFF ** attempt, 30)
@@ -158,51 +155,69 @@ class EndpointMonitor:
             return ids
 
 
-    async def process_response(self, url: str, response: aiohttp.ClientResponse, scan_name: str) -> None:
+    async def process_response(self, url: str, status, headers, content, scan_name: str) -> None:
         try:
-            # Get response content length from headers (if available)
-            content_length = response.content_length  
-
-            # If content_length is not available, manually compute response size
-            response_body = await response.read()  # Read the body as bytes
-            response_size = len(response_body)  # Get response size in bytes
             
-            response_data = ResponseData(
-                url=url,
-                body=response_body.decode(errors="ignore"),  # Decode safely
-                status_code=response.status,
-                content_length=content_length if content_length else response_size,  # Fallback if None
-                headers=dict(response.headers),
-                content_type=response.headers.get('Content-Type', '')
-            )
+            if content == "Nil":
+                current_data = {
+                    'program_id': None,
+                    'target_id': None,
+                    'scan_name': scan_name,
+                    'status': 'active',
+                    'url': url,
+                    'old_status_code': None,
+                    'new_status_code': None,
+                    'old_response_size': None,
+                    'new_response_size': None,
+                    'old_body_hash': None,
+                    'new_body_hash': None,
+                    'old_body_file_path': None,
+                    'new_body_file_path': None,
+                    'change_detected_at': None,
+                    'need_review': False
+                }
+            else:
+                logger.info(f"Reading Response for [{url}]")
+                response_body = content
+                response_size = len(response_body) # Get response size in bytes
+                
+                response_data = ResponseData(
+                    url=url,
+                    body=response_body.decode(errors="ignore"), # Decode safely
+                    status_code=status,
+                    content_length= response_size,
+                    headers=dict(headers) if headers else None,
+                    content_type=headers.get('Content-Type', '')
+                )
 
-            # Save response to file
-            old_path, new_path = await self.file_manager.save_response(response_data)
+                # Save response to file
+                old_path, new_path = await self.file_manager.save_response(response_data)
 
-            logger.info(f"Response Size for [{url}] [{response_size} bytes]")
+                logger.info(f"Response Size for [{url}] [{response_size} bytes]")
 
-            current_data = {
-                'program_id': None,
-                'target_id': None,
-                'scan_name': scan_name,
-                'status': 'active',
-                'url': url,
-                'old_status_code': None,
-                'new_status_code': response_data.status_code,
-                'old_response_size': None,
-                'new_response_size': response_size,
-                'old_body_hash': None,
-                'new_body_hash': hashlib.sha256(response_body).hexdigest(),
-                'old_body_file_path': old_path,
-                'new_body_file_path': new_path,
-                'change_detected_at': None,
-                'need_review': False
-            }
+                current_data = {
+                    'program_id': None,
+                    'target_id': None,
+                    'scan_name': scan_name,
+                    'status': 'active',
+                    'url': url,
+                    'old_status_code': None,
+                    'new_status_code': response_data.status_code,
+                    'old_response_size': None,
+                    'new_response_size': response_size,
+                    'old_body_hash': None,
+                    'new_body_hash': hashlib.sha256(response_body).hexdigest(),
+                    'old_body_file_path': old_path,
+                    'new_body_file_path': new_path,
+                    'change_detected_at': None,
+                    'need_review': False
+                }
 
             # Update program and target IDs if available
             ids = await self.get_program_and_target_id(url)
             if ids:
                 current_data['target_id'], current_data['program_id'] = ids
+                logger.info(f"Endpoint found on DB [{url}]")
 
             previous_data = self.db_ops.query_operations().get_endpoint_data_by_url(url)
             if previous_data:
@@ -217,17 +232,34 @@ class EndpointMonitor:
 
     async def worker(self, worker_id: int, queue: asyncio.Queue, session: ClientSession, scan_name: str):
         while True:
+            logger.info(f"In while")
             url = await queue.get()
+            
+            # Exit if a sentinel None is encountered
             if url is None:
-                break
+                logger.info(f"Worker {worker_id} breaking the loop")
+                queue.task_done()  # Mark task done for sentinel
+                break  # Break out of the loop
 
             logger.debug(f"Worker {worker_id} processing: {url}")
             response = await self.make_request(session, url)
-            
-            if response:
-                await self.process_response(url, response, scan_name)
-            
-            queue.task_done()
+
+            if response is None:
+                status = "Nil"
+                headers = "Nil"
+                content = "Nil"
+            else:
+                status, headers, content = response
+
+            if content:
+                logger.debug(f"Processing response for [{url}]")
+                await self.process_response(url, status, headers, content, scan_name)
+            else:
+                logger.debug(f"Response is None (not resolved) for [{url}]")
+                await self.process_response(url, status, headers, content, scan_name)
+
+            queue.task_done()  # Mark task as done after processing URL
+            logger.info(f"Worker {worker_id} finished processing: {url}")
 
     @staticmethod
     def get_ssl_context() -> ssl.SSLContext:
@@ -256,33 +288,37 @@ class EndpointMonitor:
             
         logger.info(f"Processing {len(valid_urls)} valid endpoints")
 
-
         timeout = aiohttp.ClientTimeout(total=TIMEOUT)
+        
         # Disable SSL verification
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
 
         async with aiohttp.ClientSession(timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+            # Create worker tasks
             workers = [
                 asyncio.create_task(self.worker(i, queue, session, scan_name))
                 for i in range(MAX_CONCURRENT_REQUESTS)
             ]
-            await queue.join()
-
-            # Ensure workers are done and session is properly closed
+            
+            # Add sentinel None values to stop workers
             for _ in workers:
                 await queue.put(None)
+            
+            # Wait until all URLs have been processed
+            await queue.join()
+            
+            # Ensure all workers have exited
             await asyncio.gather(*workers)
 
 async def monitor_endpoints(urls: List[str], scan_name: str):
         
     monitor = EndpointMonitor(
-        db_config=db_config,
-        urls_file='endpoints.txt',
-        check_interval=10,
+        db_config=db_config
     )
         
     print("=====[START]=====")
     await monitor.run(urls, scan_name)
     print("=====[END]=====")
+    return "Done"

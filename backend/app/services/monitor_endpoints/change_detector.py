@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 import os
 from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = True)
+logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
 
 @dataclass
 class ChangeMetadata:
@@ -155,14 +155,14 @@ class EndpointChangeDetector:
                     self._update_database(previous_data['id'], updated_data, changes)
 
                     changed_fields = [change.field_name for change in changes]
-                    print(f"Changes detected for {updated_data['url']}: {', '.join(changed_fields)}")
+                    logger.info(f"Changes detected for {updated_data['url']}: {', '.join(changed_fields)}")
                     return True, changed_fields
                 else:
                     logger.info("Running For the first time")
                     self._update_database(previous_data['id'], updated_data, changes)
 
                     changed_fields = [change.field_name for change in changes]
-                    print(f"Changes detected for {updated_data['url']}: {', '.join(changed_fields)}")
+                    logger.info(f"Changes detected for {updated_data['url']}: {', '.join(changed_fields)}")
                     return True, changed_fields
             else:
                 # Update timestamp only
@@ -180,7 +180,7 @@ class EndpointChangeDetector:
             self.db_ops.update_operations().update_endpoint_data(endpoint_id, update_data)
             
             change_summary = ", ".join(f"{change.field_name}" for change in changes)
-            print(f"Database updated for {update_data['url']} with changes: {change_summary}")
+            logger.info(f"Database updated for {update_data['url']} with changes: {change_summary}")
             
         except Exception as e:
             logger.exception(f"Database update failed for endpoint {endpoint_id}: {e}")

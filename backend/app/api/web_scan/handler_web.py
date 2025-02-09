@@ -13,6 +13,7 @@ from app.config.db_config import db_config
 from app.api.web_scan.new_scan import new_scan
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+from app.api.web_scan.web_scan_db_manager import get_existing_programnames
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
@@ -60,6 +61,10 @@ async def api_get_all():
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
+        
+@router.get("/get-existing-programnames")
+async def api_get_existing_programnames():
+    return await get_existing_programnames()
 
 @router.post("/process-scan")
 async def process_scan(

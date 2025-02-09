@@ -169,6 +169,21 @@ async def get_existing_programs():
     except Exception as e:
         logger.exception("Error getting programs")
         raise HTTPException(status_code=500, detail=f"Error getting programs: {e}")
+    
+async def get_existing_scans():
+    try:
+        data = db_ops.query_operations().get_all_scannames()
+
+        if data is not None:
+            flattened = [item[0] for item in data]  # Flatten the list
+            unique_items = sorted(set(flattened))   # Remove duplicates and sort
+            return JSONResponse(content={"scan_name": unique_items}, status_code=200)
+        else:
+            return None
+    
+    except Exception as e:
+        logger.exception("Error in getting scan names")
+        raise HTTPException(status_code=500, detail=f"Error in getting scan names: {e}")
 
 async def add_new_endpoints(scan_name, endpoint, file, scan_options):
     
@@ -209,34 +224,38 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
 
         # Process endpoint input
         if endpoint:
-            current_data['url'] = endpoint
-            try:
-                domain_name = get_domain_from_url(endpoint)
-                ids = db_ops.query_operations().get_target_and_program_id(domain_name)
-                if ids is not None:
-                    target_id, program_id = ids
-                else: 
-                    target_id = None
-                    program_id = None 
-                       
-                if program_id is not None:
-                    logger.info(f"Program Id found for target_domain {domain_name}")
-                    current_data['program_id'] = program_id
-                else:
-                    logger.warning(f"Program Id not found for target_domain {domain_name}. Continuing with null value")
-                    
-                if target_id is not None:
-                    current_data['target_id'] = target_id
-                    logger.info(f"Targer Id found for target_domain {domain_name}")
-                else:
-                    logger.warning(f"Target Id not found for target_domain {domain_name}. Continuing with null value")
+            result = urlparse(endpoint)
+            if result.scheme in ('http', 'https') and result.netloc != '':
+                current_data['url'] = endpoint
+                try:
+                    domain_name = get_domain_from_url(endpoint)
+                    ids = db_ops.query_operations().get_target_and_program_id(domain_name)
+                    if ids is not None:
+                        target_id, program_id = ids
+                    else: 
+                        target_id = None
+                        program_id = None 
+                        
+                    if program_id is not None:
+                        logger.info(f"Program Id found for target_domain {domain_name}")
+                        current_data['program_id'] = program_id
+                    else:
+                        logger.warning(f"Program Id not found for target_domain {domain_name}. Continuing with null value")
+                        
+                    if target_id is not None:
+                        current_data['target_id'] = target_id
+                        logger.info(f"Targer Id found for target_domain {domain_name}")
+                    else:
+                        logger.warning(f"Target Id not found for target_domain {domain_name}. Continuing with null value")
 
-                db_ops.insert_operations().insert_endpoint(current_data)
-                logger.info(f"New endpoint added to DB: {endpoint}")
-                return JSONResponse(content={"message": f"Endpoint Added: {endpoint}"}, status_code=200)
-            except Exception as e:
-                logger.exception("Error: Unable to add new endpoint to DB")
-                return JSONResponse(content={"message": "Error: Unable to add new endpoint to DB"}, status_code=500)
+                    db_ops.insert_operations().insert_endpoint(current_data)
+                    logger.info(f"New endpoint added to DB: {endpoint}")
+                    return JSONResponse(content={"message": f"Endpoint Added: {endpoint}"}, status_code=200)
+                except Exception as e:
+                    logger.exception("Error: Unable to add new endpoint to DB")
+                    return JSONResponse(content={"message": "Error: Unable to add new endpoint to DB"}, status_code=500)
+            else:
+                logger.info(f"Invalid Endpoint {endpoint}")
 
         # Process file input
         if file:
@@ -248,10 +267,31 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
 
             with open(file_location, "r") as file_content:
                 all_lines = file_content.readlines()
-                for line in all_lines:
+                valid_urls = [url for url in all_lines if urlparse(url).scheme in ["http", "https"] and urlparse(url).netloc]
+                for line in valid_urls:
                     endpoint = line.strip()
                     current_data['url'] = endpoint
                     try:
+                        domain_name = get_domain_from_url(endpoint)
+                        ids = db_ops.query_operations().get_target_and_program_id(domain_name)
+                        if ids is not None:
+                            target_id, program_id = ids
+                        else: 
+                            target_id = None
+                            program_id = None 
+                            
+                        if program_id is not None:
+                            logger.info(f"Program Id found for target_domain {domain_name}")
+                            current_data['program_id'] = program_id
+                        else:
+                            logger.warning(f"Program Id not found for target_domain {domain_name}. Continuing with null value")
+                            
+                        if target_id is not None:
+                            current_data['target_id'] = target_id
+                            logger.info(f"Targer Id found for target_domain {domain_name}")
+                        else:
+                            logger.warning(f"Target Id not found for target_domain {domain_name}. Continuing with null value")
+                            
                         db_ops.insert_operations().insert_endpoint(current_data)
                     except Exception as e:
                         logger.exception("Error: Unable to add new endpoint to DB", endpoint)

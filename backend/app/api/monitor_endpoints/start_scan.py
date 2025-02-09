@@ -3,11 +3,12 @@ from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
 from backend.app.services.monitor_endpoints.service_monitor import monitor_endpoints
 from collections import defaultdict
-import requests
+import urllib.parse
+import urllib.request
 from app.config.db_config import db_config
 
 from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
+logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = True)
 
 
 db_manager = DatabaseManager(db_config)
@@ -16,20 +17,45 @@ db_ops = DatabaseOperations(db_manager)
 # Shared flag to control task execution
 scan_status = False
 
-def send_telegram_message(message: str):
+async def send_telegram_message(message: str):
+    logger.debug(f"Notifying on Telegram: {message}")
+    
     url = 
     payload = {
         ,
         'text': message
     }
+    
+    # Encode the data for POST request
+    data = urllib.parse.urlencode(payload).encode()
 
-    response = requests.post(url, data=payload)
+    # Run the request in a separate thread to avoid blocking the asyncio event loop
+    try:
+        # Use asyncio.to_thread to run the synchronous urllib code in a non-blocking manner
+        response = await asyncio.to_thread(make_request, url, data)
+        if response.status == 200:
+            logger.info("Message sent successfully")
+        else:
+            logger.exception(f"Failed to send message: {response.status}")
+        
+        logger.debug("Notification sent on Telegram")
+    
+    except Exception as e:
+        logger.exception(f"Error sending message: {e}")
 
-    if response.status_code == 200:
-        logger.info("Message sent successfully")
-    else:
-        logger.exception(f"Failed to send message: {response.status_code}")
+    logger.debug("Done with Notification")
 
+
+def make_request(url, data):
+    try:
+        req = urllib.request.Request(url, data=data)
+        with urllib.request.urlopen(req, timeout=1) as response:
+            return response
+    except urllib.error.URLError as e:
+        logger.exception(f"Error in urllib request: {e}")
+        raise
+    
+    
 def get_endpoints_by_status(status):
     try:
         data = db_ops.query_operations().get_endpoints_data_by_status(status)
@@ -81,7 +107,9 @@ def group_urls_by_scan_name(endpoints):
 
 async def start_scan_for_group(scan_name, urls):
     url_strings = [entry['url'] for entry in urls]
-    await monitor_endpoints(url_strings, scan_name)
+    result = await monitor_endpoints(url_strings, scan_name)
+    logger.debug(f"Got result {result}")
+    return result
 
 async def schedule_scans():
     active_endpoints = get_endpoints_by_status("active")
@@ -90,11 +118,13 @@ async def schedule_scans():
         grouped_endpoints = group_urls_by_scan_name(active_endpoints)
 
         for scan_name, urls in grouped_endpoints.items():
-            await start_scan_for_group(scan_name, urls)
-            send_telegram_message(f"Scan completed [{scan_name}] Count [{len(urls)}]")
+            result = await start_scan_for_group(scan_name, urls)
+            logger.debug(f"Got result {result}")
+            await send_telegram_message(f"Scan completed [{scan_name}] Count [{len(urls)}]")
+        return "Done with scheduled scans"
     else:
         logger.warning("No Active endpoints found for scan")
-        send_telegram_message("No Active endpoints found for scan")
+        await send_telegram_message("No Active endpoints found for scan")
 
 async def run_periodic_scans():
     logger.info("In periodic Scan funtion")
@@ -104,9 +134,10 @@ async def run_periodic_scans():
 
     while scan_status:
         logger.info("Starting scheduled scans...")
-        await schedule_scans()
+        result = await schedule_scans()
+        logger.debug(result)
         logger.info("Scheduled scans completed. Waiting for the next interval...")
-        await asyncio.sleep(10)  # 4 hours interval
+        await asyncio.sleep(7200)  # 2 hours interval
     logger.info(f"Scan Satus {scan_status}")
     return
 

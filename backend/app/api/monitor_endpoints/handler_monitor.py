@@ -16,6 +16,7 @@ from backend.app.api.monitor_endpoints.endpoint_db_manager import get_endpoints_
 from backend.app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_status
 from backend.app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_scan_interval
 from backend.app.api.monitor_endpoints.endpoint_db_manager import get_existing_programs
+from backend.app.api.monitor_endpoints.endpoint_db_manager import get_existing_scans
 from backend.app.api.monitor_endpoints.start_scan import run_periodic_scans
 from backend.app.api.monitor_endpoints.start_scan import stop_scans
 from backend.app.api.monitor_endpoints.start_scan import get_scan_state
@@ -29,7 +30,7 @@ async def monitor():
 
 @router.post("/new")
 async def api_add_new_endpoints(
-    endpoint: Union[str, None] = Form([]), 
+    endpoint: Union[str, None] = Form(None), 
     scan_name: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
     scan_options: Union[str, None] = Form(None),  # JSON string of selected scan options
@@ -43,6 +44,10 @@ async def api_get_scan_state():
 @router.get("/get-existing-programs")
 async def api_get_existing_programs():
     return await get_existing_programs()
+
+@router.get("/get-existing-scans")
+async def api_get_existing_scans():
+    return await get_existing_scans()
 
 @router.post("/start-scans")
 async def api_start_scan():
