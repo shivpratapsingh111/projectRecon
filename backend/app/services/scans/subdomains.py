@@ -58,7 +58,7 @@ def organise_subdomains(group_name, domain_list):
     commands = [
         (
             "Httpx", 
-            f"""cat {result_dir}/{subdomainResults} | httpx -server -td -sc -title -silent -json -o {result_dir}/httpx_subdomains.json 2> /dev/null && cat {result_dir}/httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {result_dir}/{liveSubdomains_SubdomainResults}""", 
+            f"""cat {result_dir}/{subdomainResults} | httpx -server -td -sc -title -json -o {result_dir}/httpx_subdomains.json 2> /dev/null && cat {result_dir}/httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {result_dir}/{liveSubdomains_SubdomainResults}""", 
             f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
             f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
         )
@@ -93,9 +93,9 @@ def func_subdomains_ps(group_name, domain_list, execution_style):
         os.makedirs(result_dir, exist_ok=True)
         os.makedirs(f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/logs", exist_ok=True)
         
-        bbot_cmd = f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} -s --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv github_codesearch github_org httpx hunterio internetdb ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar --exclude-modules dnsbrute dnsbrute_mutations wayback" # for bbot output file will be {result_dir}/bbot/subdomains.txt
-        subdominator_cmd = f"subdominator -d {domain} --silent --no-color --disable-update-check -o {result_dir}/{subdominator}"
-        subfinder_cmd = f"subfinder -d {domain} -sources chinaz,columbus,github,hunter,robtex,threatbook,whoisxmlapi -silent -no-color -disable-update-check -o {result_dir}/{subfinder}"
+        bbot_cmd = f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv github_codesearch github_org httpx hunterio internetdb ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar --exclude-modules dnsbrute dnsbrute_mutations wayback" # for bbot output file will be {result_dir}/bbot/subdomains.txt
+        subdominator_cmd = f"subdominator -d {domain} --no-color --disable-update-check -o {result_dir}/{subdominator}"
+        subfinder_cmd = f"subfinder -d {domain} -sources chinaz,columbus,github,hunter,robtex,threatbook,whoisxmlapi,zoomeyeapi,virustotal,shodan,securitytrails,fofa,chaos,certspotter,censys,binaryedge,bevigil -no-color -disable-update-check -o {result_dir}/{subfinder}"
         cero_cmd = f"cero {domain} | tee -a {result_dir}/{cero}"
         sublist3r_cmd = f"cd ~/tools/Sublist3r && python3 sublist3r.py -d {domain} -o {result_dir}/{sublist3r}"
         yass_cmd = f"yass {domain} -nc | tee -a {result_dir}/{yass}"
