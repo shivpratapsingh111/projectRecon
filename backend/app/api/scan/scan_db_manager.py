@@ -7,7 +7,7 @@ import json
 import os
 
 from app.config.db_config import db_config
-from app.config.config import root_Data_Dir
+from app.config.config import ROOT_DATA_DIR
 
 from app.services.scans.db.db_manager import DatabaseManager
 from app.services.scans.db.db_operations import DatabaseOperations

@@ -10,10 +10,10 @@ from fastapi import WebSocket, WebSocketDisconnect
 import json
 
 from app.config.db_config import db_config
-from app.api.web_scan.new_scan import new_scan
+from app.api.scan.new_scan import new_scan
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from app.api.web_scan.web_scan_db_manager import get_existing_programnames
+from app.api.scan.scan_db_manager import get_existing_programnames
 
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
@@ -29,22 +29,13 @@ manager = CommandExecutor()
 async def web():
     return {"message": "Need input"}
 
-# @router.get("/get-status/{groupName}")
-# async def get_status1(groupName: str):
-#     try:
-#         result = manager.command_monitor(groupName)
-#         return {f"status of {groupName}": result}
-#     except ValueError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-
 @router.websocket("/ws/get-all")
 async def websocket_get_all(websocket: WebSocket):
     try:
-        await websocket.accept()  # Accept the WebSocket connection
+        await websocket.accept()
         while True:
-            result = manager.get_all_data()  # Get your data
-            # Convert result to JSON string before sending
-            await websocket.send_text(json.dumps(result))  # Send the result over the WebSocket
+            result = manager.get_all_data()  
+            await websocket.send_text(json.dumps(result)) 
             await asyncio.sleep(5)
     except WebSocketDisconnect:
         logger.warning("Client disconnected")
@@ -57,7 +48,7 @@ async def websocket_get_all(websocket: WebSocket):
 @router.get("/get-all")
 async def api_get_all():
     try:
-        result = manager.get_all_data()  # Get your data
+        result = manager.get_all_data()
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
@@ -72,7 +63,7 @@ async def process_scan(
     groupName: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
     execution_style: Union[str, None] = Form("sequential"),
-    scanOptions: Union[str, None] = Form(None),  # JSON string of selected scan options
+    scanOptions: Union[str, None] = Form(None),
 ):
     """
     Processes the request to extract scan names and domains.

@@ -14,8 +14,7 @@ from app.api.monitor_endpoints import handler_monitor
 from app.api.results import handler_results
 
 from app.config.db_config import db_config
-from app.api.web_scan import handler_web
-from app.api.download import handler_download
+from app.api.scan import handler_scan
 
 db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
 
@@ -41,12 +40,11 @@ async def root():
 
 
 
-app.include_router(handler_web.router, prefix="/scan", tags=["Scanning"])
+app.include_router(handler_scan.router, prefix="/scan", tags=["Scanning"])
 app.include_router(handler_add.router, prefix="/add", tags=["Add"])
 app.include_router(handler_report.router, tags=["Report"])
 app.include_router(handler_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
 app.include_router(handler_results.router, prefix="/results", tags=["Results"])
-app.include_router(handler_download.router, prefix="/download", tags=["Download Files"])
 
 
 

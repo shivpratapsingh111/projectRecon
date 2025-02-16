@@ -34,11 +34,11 @@
     
 #     # Execute commands for a group of domains
 #     for domain in domain_list:
-#         result_dir = f"{root_Data_Dir}/{group_name}/{domain}/ssrf"
+#         result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/ssrf"
 #         os.makedirs(result_dir, exist_ok=True)
 #         os.makedirs(f"{result_dir}/logs", exist_ok=True)
 #         commands = [
-#             ("ssrf", f"python3 backend/app/services/pyscripts/ssrf_script.py {root_Data_Dir}/{group_name}/{domain}/{urlResults} {link}", f"{result_dir}/{nucleiResults}_stdout", f"{result_dir}/logs/{nucleiResults}")
+#             ("ssrf", f"python3 backend/app/services/pyscripts/ssrf_script.py {ROOT_DATA_DIR}/{group_name}/{domain}/{urls_file} {link}", f"{result_dir}/{nucleiResults}_stdout", f"{result_dir}/logs/{nucleiResults}")
 #         ]
         
 #         # Execute commands and store the result

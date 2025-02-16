@@ -7,7 +7,7 @@ import json
 import os
 
 from app.config.db_config import db_config
-from app.config.config import root_Data_Dir
+from app.config.config import ROOT_DATA_DIR
 
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
@@ -259,7 +259,7 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
 
         # Process file input
         if file:
-            scan_dir = f"{root_Data_Dir}/monitoring/{scan_name}"
+            scan_dir = f"{ROOT_DATA_DIR}/monitoring/{scan_name}"
             file_location = f"{scan_dir}/{file.filename}"
             os.makedirs(scan_dir, exist_ok=True)
             with open(file_location, "wb") as buffer:

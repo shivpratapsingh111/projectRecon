@@ -14,7 +14,7 @@ class DatabaseManager:
     def __init__(self, db_config: Dict):
         self.db_config = db_config
         
-        # [Create DB and TABLE if not exists]
+        # [This Initializes DB, which is done in main db file, so commented here]
         # self._initialize_database()
         
     def _initialize_database(self):

@@ -1,5 +1,11 @@
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+# from app.services.monitor_endpoints.db.db_manager import DatabaseManager
+# from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+import os, json, uuid
+import psycopg2
+from psycopg2.extras import execute_values
+
+# from app.db.db_queries import QueryManager
+# db_query = QueryManager
 
 db_config = {
     'dbname': 'test_monitor',
@@ -8,19 +14,49 @@ db_config = {
     'host': 'localhost'
 }
 
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
+# db_manager = DatabaseManager(db_config)
+# db_ops = DatabaseOperations(db_manager)
 
-# db_ops.update_operations().update_need_review_endpoint('c10ddb8f-33f3-44a3-9aa3-762f9f32a485')
+def read_jsonl_file(file_path):
+    with open(file_path, "r") as file:
+        return [json.loads(line) for line in file]
 
-# result = db_ops.query_operations().get_endpoints_data_by_status('active')
-# print(result[0])
-# print(result[1])
-# program_id = '509a2075-9a65-468e-b14f-e1899827c537'
-# result = db_ops.query_operations().get_program_name(program_id)
-# 
-# print(result[0][0])
+UPDATE_WEB_TARGETS_DATA = """
+    UPDATE web_targets SET
+        technology = %s,
+        status_code = %s,
+        port = %s,
+        host = %s,
+        ipv4 = %s,
+        ipv6 = %s,
+        response_time = %s,
+        webserver = %s
+    WHERE target_domain = %s;
+"""
 
-target_id, program_id = db_ops.query_operations().get_target_and_program_id('cup.carry1st.com')
-print(f"Target Id {target_id}")
-print(f"Program Id {program_id}")
+
+def update_subdomains_to_db(db_config):
+    file_path = "/home/retro/projectRecon-Data/latest-cyber/thecyberboy.com/subdomains/httpx_subdomains.json"
+    
+    if os.path.exists(file_path):
+        subdomains_data = read_jsonl_file(file_path)
+        with psycopg2.connect(**db_config) as conn:
+            with conn.cursor() as cursor:
+                for entry in subdomains_data:
+                    values = (
+                        entry.get("tech", []),  # Keep as a list for PostgreSQL array
+                        entry.get("status_code"),
+                        entry.get("port"),
+                        entry.get("host"),
+                        entry.get("a", []),  # Keep as a list
+                        entry.get("aaaa", []),
+                        entry.get("time"),
+                        entry.get("webserver"),
+                        entry.get("input")
+                    )
+                    cursor.execute(UPDATE_WEB_TARGETS_DATA, values)
+                
+                conn.commit()
+    else:
+        print("Doesn't Exists")
+update_subdomains_to_db(db_config)

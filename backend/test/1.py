@@ -1,89 +1,119 @@
-# from app.interface.json_data_manager import GroupManager
-# from app.config.config import *
-# data_manager_obj = GroupManager(data_file)
+import json
+from app.services.scans.urls import start_urls_scan
+from app.services.scans.subdomains import start_subdomains_scan
+from app.services.scans.subdomains import func_subdomains_ps_only
 
-# import json
-# with open('groups.json') as f:
-#     data = json.load(f)
+config_string = """
+{
+    "subdomainEnum":
+    {
+        "run": true,
+        "includeApi": false,
+        "toolSelection": true,
+        "selectedTools":
+        [
+            "bbot",
+            "subdominator",
+            "subfinder",
+            "githubsubdomains",
+            "gitlabsubdomains"
+        ],
+        "isPassive": true,
+        "dnsBruteforce": false
+    },
+    "urlEnum":
+    {
+        "run": true,
+        "includeApi": true,
+        "toolSelection": true,
+        "selectedTools":
+        [
+            "waybackurls"
+        ],
+        "isPassive": true,
+        "isActivePassive": false
+    },
+    "nuclei":
+    {
+        "run": false,
+        "allTemplates": false,
+        "specificTemplates": false,
+        "templateInput": "",
+        "customTemplates": false,
+        "specificCommand": false,
+        "commandInput": ""
+    },
+    "nmap":
+    {
+        "run": false,
+        "allPorts": false,
+        "topPorts": false,
+        "webPorts": false,
+        "specificPorts": false,
+        "portInput": "",
+        "specificCommand": false,
+        "commandInput": ""
+    },
+    "js":
+    {
+        "run": true,
+        "doEverything": true,
+        "specificRegex": false,
+        "regexInput": "",
+        "regexOnly": false
+    }
+}
+"""
+def subdomains():
+    print("Running subdomains...")
 
-# for group_uuid in data['groups']:
-#     print(group_uuid)
+def urls():
+    print("Running urls...")
 
-# # print(data_manager_obj._read_file())
-# import app.services.scans.arrange_urls
-# # Get the file path of the module
-# module_path = app.services.scans.arrange_urls.__file__
+def nmap():
+    print("Running nmap...")
 
-# print(f"python3 {module_path}")
+def js():
+    print("Running js...")
 
-# from app.interface.process_manager import CommandExecutor
+def nuclei():
+    print("Running nuclei...")
 
-# a= CommandExecutor()
-
-# a._update_process_status(544429, "killed")
-
-import aiohttp
-import asyncio
-import ssl
-
-# Function to create and configure a session
-async def create_session():
-    timeout = aiohttp.ClientTimeout(total=5)  # Set timeout to 5 seconds
-
-    # Disable SSL verification
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-
-    session = aiohttp.ClientSession(timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context))
-    return session
-
-# Function to make a request using the provided session
-async def fetch_data(session, url):
-    try:
-        async with session.get(url) as response:
-            return await response.text()
-    except asyncio.TimeoutError:
-        return "Request timed out"
-    except aiohttp.ClientError as e:
-        return f"Request failed: {e}"
-
-# Main function to run everything
-async def main():
-    url = "http://ftp.halecountryclub.co.uk/"  # Example of an SSL site with self-signed certs
+def run_scans(group_name, domain_list, execution_style, scan_config):
     
-    session = await create_session()  # Create the session once
-    try:
-        response = await fetch_data(session, url)
-        print(response)
-    finally:
-        await session.close()  # Always close the session when done
+    subdomain_enum = scan_config.get("subdomainEnum", {})
+    url_enum = scan_config.get("urlEnum", {})
+    nuclei_enum = scan_config.get("nuclei", {})
+    nmap_enum = scan_config.get("nmap", {})
+    js_enum = scan_config.get("js", {})
+    
+    if not subdomain_enum.get("run", False):
+        print("Subdomain enumeration is disabled.")
+    else:
+        subdomains()
+        start_subdomains_scan(group_name, domain_list, execution_style, subdomain_enum)
 
-asyncio.run(main())
+    if not url_enum.get("run", False):
+        print("url_enum is disabled.")
+    else:
+        urls()
+        start_urls_scan(group_name, domain_list, execution_style, url_enum)
+
+    if not nuclei_enum.get("run", False):
+        print("nuclei is disabled.")
+    else:
+        nuclei()
+
+    if not nmap_enum.get("run", False):
+        print("nmap is disabled.")
+    else:
+        nmap()
+
+    if not js_enum.get("run", False):
+        print("js is disabled.")
+    else:
+        js()
 
 
-
-
-
-
-
-
-
-# from test_data_manager import GroupManager
-# data_manager_obj = GroupManager('groups.json')
-# group_name = "intigriti"
-# domain = "indeedflexx.com"
-# domain_uuid = "75a011e3-1e89-4656-bb1b-b13edb15789e"
-
-# command_details = {
-#     "command_name": "htssstpx",
-#     "pid": 5,
-#     "command": "python server.py",
-#     "status": "runssssssssssning",
-#     "start_time": "2024-01-15T10:00:00Z"
-# }
-
-# pid = 1
-# status = "2222222222222222"
-
-# data_manager_obj.update_command_status_by_pid(pid, status)
+config = json.loads(config_string)
+run_scans(group_name="group-1", domain_list=['thecyberboy.com'], execution_style="parallel", scan_config=config)

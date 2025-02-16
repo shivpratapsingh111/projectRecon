@@ -8,14 +8,14 @@ from filelock import FileLock
 from datetime import datetime
 from typing import List, Tuple, Literal, Dict
 from app.interface.json_data_manager import GroupManager
-from app.config.config import root_Data_Dir
+from app.config.config import ROOT_DATA_DIR
 from app.logger.logger import setup_logger
 
 logger = setup_logger(__name__, log_file_path='scan', enable_debug=True)
 
 class ProcessManager:
     def __init__(self):
-        self.processes_file = os.path.join(root_Data_Dir, "running_processes.json")
+        self.processes_file = os.path.join(ROOT_DATA_DIR, "running_processes.json")
         self.process_lock = FileLock(f"{self.processes_file}.lock")
         self._ensure_process_file_exists()
         self.termination_events = {}  # Track process termination events
@@ -91,14 +91,14 @@ class ProcessManager:
 
 class CommandExecutor:
     def __init__(self):
-        self.root_Data_Dir = root_Data_Dir
+        self.ROOT_DATA_DIR = ROOT_DATA_DIR
         self.group_manager = GroupManager()
         self.process_manager = ProcessManager()
-        self.file_lock = FileLock("data.json.lock")
+        self.file_lock = FileLock(f"{self.ROOT_DATA_DIR}/data.json.lock")
 
     def _create_directories(self, group_name: str, domain: str, scan_dir: str) -> str:
         """Create necessary directories for storing command outputs."""
-        result_dir = os.path.join(self.root_Data_Dir, group_name, domain, scan_dir)
+        result_dir = os.path.join(self.ROOT_DATA_DIR, group_name, domain, scan_dir)
         log_dir = os.path.join(result_dir, "logs")
         
         os.makedirs(result_dir, exist_ok=True)
@@ -162,7 +162,7 @@ class CommandExecutor:
                               group_uuid: str, domain_uuid: str) -> None:
         """Execute a single command and manage its state."""
         try:
-            with open(stdout_path, 'w') as stdout_file, open(stderr_path, 'w') as stderr_file:
+            with open(stdout_path, 'a') as stdout_file, open(stderr_path, 'a') as stderr_file:
                 process = subprocess.Popen(
                     cmd,
                     shell=True,
@@ -215,6 +215,9 @@ class CommandExecutor:
             self.group_manager.add_command_to_domain(group_uuid, domain_uuid, command_details)
             self.process_manager.remove_process(process.pid)
             
+            if status == "running" and not self._check_process_running(process.pid):
+                self._update_process_status(process.pid, 'error')
+
             logger.debug(f"Command completed: {cmd_name} with status: {status}")
             
         except Exception as e:
@@ -263,10 +266,10 @@ class CommandExecutor:
             
         except ProcessLookupError:
             logger.error(f"Process with PID {pid} not found")
-            return False
+            return "Not found"
         except Exception as e:
             logger.error(f"Error killing process {pid}: {str(e)}")
-            return False
+            return "Error in killing"
 
 
     def kill_domain_processes(self, domain_uuid: str) -> List[int]:
@@ -279,7 +282,7 @@ class CommandExecutor:
             
             for pid_str, process_info in domain_processes.items():
                 pid = int(pid_str)
-                if self.kill_process_by_pid(pid):
+                if self.kill_process_by_pid(pid) == True:
                     killed_pids.append(pid)
                 else:
                     self._update_process_status(pid, 'error')
@@ -301,7 +304,7 @@ class CommandExecutor:
             
             for pid_str, process_info in group_processes.items():
                 pid = int(pid_str)
-                if self.kill_process_by_pid(pid):
+                if self.kill_process_by_pid(pid) == True:
                     killed_pids.append(pid)
                 else:
                     self._update_process_status(pid, 'error')

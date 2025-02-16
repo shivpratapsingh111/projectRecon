@@ -13,11 +13,11 @@ def func_xss_run(group_name, domain_list):
     
     # Execute commands for a group of domains
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/xss"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/xss"
         os.makedirs(result_dir, exist_ok=True)
         os.makedirs(f"{result_dir}/logs", exist_ok=True)
         commands = [
-            ("xss", f"""cat {root_Data_Dir}/{group_name}/{domain}/{urlResults} | grep = | kxss | grep '>\|<\|"'""", f"{result_dir}/{xssResults}", f"{result_dir}/logs/{xssResults}")
+            ("xss", f"""cat {ROOT_DATA_DIR}/{group_name}/{domain}/{urls_file} | grep = | kxss | grep '>\|<\|"'""", f"{result_dir}/{xssResults}", f"{result_dir}/logs/{xssResults}")
         ]
         
         # Execute commands and store the result

@@ -154,6 +154,28 @@ class EndpointUpdateOperations:
             logger.exception(f"Failed to update timestamp for endpoint {id}: {str(e)}")
             raise
 
+    def update_web_target(self, web_target_data: Dict):
+        try:
+            params = (
+                web_target_data['program_id'],
+                web_target_data['target_domain'],
+                web_target_data['technology'],
+                web_target_data['status_code'],
+                web_target_data['port'],
+                web_target_data['host'],
+                web_target_data['ipv4'],
+                web_target_data['ipv6'],
+                web_target_data['response_time'],
+                web_target_data['webserver'],
+                web_target_data['vulnerability_reported']
+            )
+            result = self.db.execute_query(QueryManager.INSERT_WEB_TARGET, params)
+            logger.info(f"New web-target created with id {result[0]}")
+            return result[0]
+        except Exception as e:
+            logger.exception(f"Failed to insert web target data {str(web_target_data['target_domain'])} : {str(e)}")
+            raise
+
     # --- Report ---
     def update_mobile_target_vuln(self, id, vulnerability_reported: Dict):
         """Update mobile target vulnerability"""

@@ -234,19 +234,33 @@ class QueryManager:
             change_detected_at = %s,
             need_review = %s,
             last_check = CURRENT_TIMESTAMP
-        WHERE id = %s
+        WHERE id = %s;
     """
     UPDATE_ENDPOINT_TIMESTAMP = """
         UPDATE monitor_endpoints
             SET last_check = CURRENT_TIMESTAMP
             WHERE id = %s;
     """
+
     UPDATE_NEED_REVIEW_ENDPOINT = """
         UPDATE monitor_endpoints
             SET need_review = FALSE
         WHERE id = %s;
     """
-    
+    # --- Web Target ---
+
+    UPDATE_WEB_TARGETS_DATA = """
+        UPDATE web_targets SET
+            technology = %s,
+            status_code = %s,
+            port = %s,
+            host = %s,
+            ipv4 = %s,
+            ipv6 = %s,
+            response_time = %s,
+            webserver = %s
+        WHERE target_domain = %s;
+    """
     # --- Report ---
     UPDATE_MOBILE_TARGET_DATA = """
     UPDATE mobile_targets

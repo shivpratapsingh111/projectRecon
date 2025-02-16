@@ -1,39 +1,83 @@
 from app.config.config  import *
 import os
 import subprocess
-import app.services.scans.arrange_urls
 from app.interface.process_manager import run_commands
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
 
-group_results = {}
+def func_urls_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools):
+    logger.debug("Starting url enumeration")
 
-def func_urls_ps(group_name, domain_list, execution_style):
-    logger.debug("Starting passive url enumeration")
-
-    # Store results for each domain
     group_results = {}
     
-    # Execute commands for a group of domains
     for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/urls"
-        domain_dir = f"{root_Data_Dir}/{group_name}/{domain}"
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/urls"
+        domain_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}"
         os.makedirs(result_dir, exist_ok=True)
-        os.makedirs(f"{root_Data_Dir}/{group_name}/{domain}/urls/logs", exist_ok=True)
-        commands = [
-            ("waybackurls", f"cat {domain_dir}/subdomains/{subdomainResults} | waybackurls", f"{result_dir}/{waybackurls_Passive_UrlResults}", f"{result_dir}/logs/{waybackurls_Passive_UrlResults}"),
-            ("gau", f"cat {domain_dir}/subdomains/{subdomainResults} | gau", f"{result_dir}/{gau_Passive_UrlResults}", f"{result_dir}/logs/{gau_Passive_UrlResults}"),
-            ("waymore", f"waymore -n -xwm -urlr 0 -r 2 -i {domain} -mode U -oU {result_dir}/{waymore_Passive_UrlResults}", f"{result_dir}/{waymore_Passive_UrlResults}_stdout", f"{result_dir}/logs/{waymore_Passive_UrlResults}")
+        os.makedirs(f"{result_dir}/.logs", exist_ok=True)
+        os.makedirs(f"{result_dir}/.tmp", exist_ok=True)
+
+
+        cmd = {
+            "waybackurls_cmd": f"cat {domain_dir}/subdomains/{subdomains_file} | waybackurls",
+
+            "gau_cmd": f"cat {domain_dir}/subdomains/{subdomains_file} | gau",
+
+            "waymore_cmd": f"waymore -n -xwm -urlr 0 -r 2 -i {domain} -mode U -oU {result_dir}/{waymore}",
+            
+            "katana_cmd":  f"katana --no-sandbox -u {domain_dir}/subdomains/{subdomains_file} -headless -no-color -depth 5 -aff -retry 2 -iqp -concurrency 5 -parallelism 5 -rate-limit 25 -xhr-extraction -js-crawl -known-files -extension-filter css,jpg,jpeg,png,svg,img,gif,mp4,flv,ogv,webm,webp,mov,mp3,m4a,m4p,scss,tif,tiff,ttf,otf,woff,woff2,bmp,ico,eot,htc,rtf,swf,image -o {result_dir}/{katana}",
+            
+            "hakrawler_cmd":  f"cat {domain_dir}/subdomains/{subdomains_file} | sed 's/^/https:\\/\\//' | hakrawler -d 5 -insecure -subs -t 5",            
+        }
+
+
+
+        all_commands = [
+            (
+                "waybackurls",
+                f"{cmd.get('waybackurls_cmd')}",
+                f"{result_dir}/{waybackurls}",
+                f"{result_dir}/.logs/{waybackurls.removesuffix('.txt')}_stderr"
+            ),
+            (
+                "gau",
+                f"{cmd.get('gau_cmd')}",
+                f"{result_dir}/{gau}",
+                f"{result_dir}/.logs/{gau.removesuffix('.txt')}_stderr"
+            ),
+            (
+                "waymore",
+                f"{cmd.get('waymore_cmd')}",
+                f"{result_dir}/.logs/{waymore}_stdout",
+                f"{result_dir}/.logs/{waymore}_stderr"
+            ),
+            (
+                "katana",
+                f"{cmd.get('katana_cmd')}",
+                f"{result_dir}/.logs/{katana.removesuffix('.txt')}_stdout",
+                f"{result_dir}/.logs/{katana.removesuffix('.txt')}_stderr"
+            ),
+            (
+                "hakrawler",
+                f"{cmd.get('hakrawler_cmd')}",
+                f"{result_dir}/{hakrawler}",
+                f"{result_dir}/.logs/{hakrawler.removesuffix('.txt')}_stderr"
+            )
         ]
-        
+
+        # Filter commands based on selected tools
+        if tool_selection:
+            commands = [cmd for cmd in all_commands if cmd[0] in selected_tools]
+        else:
+            commands = all_commands
+
         # Execute commands and store the result
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style=execution_style)
 
-
-    for domain in domain_list:
-        command = f"cat {result_dir}/{waybackurls_Passive_UrlResults} {result_dir}/{gau_Passive_UrlResults} {result_dir}/{waymore_Passive_UrlResults} | sort -u >> {result_dir}/{passive_CombinedUrlResults}" # Combining passive results
-        with open(f"{root_Data_Dir}/{group_name}/{central_log_file}" , "a") as writeLog:
+        # organise files
+        command = f"cd {result_dir} ; cat {waybackurls} {gau} {waymore} {katana} {hakrawler} | sort -u >> {urls_file} ; mv {waybackurls} {gau} {waymore} {katana} {hakrawler} .tmp/"
+        with open(f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}" , "a") as writeLog:
             process = subprocess.Popen(
                 command,
                 # stdout=writeLog,
@@ -42,70 +86,75 @@ def func_urls_ps(group_name, domain_list, execution_style):
             )
             process.wait()
 
-        logger.debug(f"Passive URL Enum completed")
-
-
-def func_urls_ac(group_name, domain_list, execution_style):
-    logger.debug("Starting active url enumeration")
-
-    # Store results for each domain
-    group_results = {}
-    
-    # Execute commands for a group of domains
-    for domain in domain_list:
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/urls"
-        domain_dir = f"{root_Data_Dir}/{group_name}/{domain}"
-        os.makedirs(result_dir, exist_ok=True)
-        commands = [
-            ("katana", f"katana -u {domain_dir}/subdomains/{subdomainResults} -o {result_dir}/{katana_Active_UrlResults} -silent -hl -nc -d 5 -aff -retry 2 -iqp -c 20 -p 20 -xhr -jc -kf -ef css,jpg,jpeg,png,svg,img,gif,mp4,flv,ogv,webm,webp,mov,mp3,m4a,m4p,scss,tif,tiff,ttf,otf,woff,woff2,bmp,ico,eot,htc,rtf,swf,image", f"{result_dir}/{katana_Active_UrlResults}_stdout", f"{result_dir}/logs/katana2from_start_tool_func"),
-            ("hakrawler", f"cat {domain_dir}/subdomains/{subdomainResults} | sed 's/^/https:\\/\\//' | hakrawler -d 5 -insecure -subs -t 40", f"{result_dir}/{hakrawler_Active_UrlResults}", f"{result_dir}/logs/{hakrawler_Active_UrlResults}")
-        ]
-        
-        # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style=execution_style)
-
-    for domain in domain_list:
-        command = f"cat {result_dir}/{katana_Active_UrlResults} {result_dir}/{hakrawler_Active_UrlResults} | sort -u >> {result_dir}/{active_CombinedUrlResults}" # Combining passive results
-        with open(f"{root_Data_Dir}/{group_name}/{central_log_file}" , "a") as writeLog:
-            process = subprocess.Popen(
-                command,
-                # stdout=writeLog,
-                stderr=writeLog,
-                shell=True,
-            )
-            process.wait()
-        logger.debug(f"Active URL Enum completed")
-
+        logger.debug(f"URL Enum completed")
 
 def organise_urls(group_name, domain_list):
+    group_results = {}
+    
     for domain in domain_list:
         logger.debug(f"Organising URL Enum for {domain}")
-        result_dir = f"{root_Data_Dir}/{group_name}/{domain}/urls"
-
+        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/urls"
+        
         commands = [
-            ("Organising Urls", f"cat {result_dir}/{passive_CombinedUrlResults} {result_dir}/{active_CombinedUrlResults} | sort -u >> {result_dir}/{urlResults}", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
-        ]
-        # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
+            (
+                "Extracting JS Urls",
+                f"""cd {result_dir} ; cat {urls_file} | grep -F .js | cut -d'?' -f1 | cut -d'#' -f1 | sort -u >> {js_urls}""",
+                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}",
+                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
+            ),
+            (
+                f"Extensions",
+                f"""
+                    categories=("ext" "text" "juicy" "docs" "code" "cert" "binaries" "archives")
+                    for category in "${{categories[@]}}"; do
+                        success_file="{result_dir}/{extensions_live}"
+                        failure_file="{result_dir}/{extensions}"
 
-        commands = [
-            ("Extracting JS Urls", f"""cat {result_dir}/{urlResults} | grep -F .js | cut -d "?" -f 1 | sort -u >> {result_dir}/{jsUrls}""", f"{root_Data_Dir}/{group_name}/{central_log_file}", f"{root_Data_Dir}/{group_name}/{central_log_file}")
-        ]
-        # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
+                        # Get the URLs for the current category
+                        category_urls=$(cat {result_dir}/{urls_file} | gf "$category" | cut -d'?' -f1 | cut -d'#' -f1 | sort -u | httpx -status-code -no-color -silent)
 
-        commands = [
-            ("Arranging Urls", f"python3 {app.services.scans.arrange_urls.__file__} {result_dir}/{urlResults} {result_dir}/{urlsArranged200} {result_dir}/{urlsArrangedAll}", f"{root_Data_Dir}/{group_name}/urlsArrange_stdout", f"{root_Data_Dir}/{group_name}/{central_log_file}")
+                        # If there are URLs for the category, add the category label at the top
+                        if [ -n "$category_urls" ]; then
+                            count=$(echo "$category_urls" | wc -l)
+                            echo "[${{category}}] [${{count}}]" >> "$success_file"
+                            echo "[${{category}}] [${{count}}]" >> "$failure_file"
+
+                            # Process each URL for the category
+                            echo "$category_urls" | while read -r url_status; do
+                                # Extract URL and status code from the output (status is in square brackets)
+                                url=$(echo "$url_status" | awk '{{print $1}}')
+                                status=$(echo "$url_status" | awk -F'[][]' '{{print $2}}')
+                                if [ "$status" -eq 200 ]; then
+                                    echo "$url [$status]" >> "$success_file"
+                                else
+                                    echo "$url [$status]" >> "$failure_file"
+                                fi
+                            done
+                        fi
+                    done
+                """,
+                f"{result_dir}/.logs/extensions_stdout",
+                f"{result_dir}/.logs/extensions_stderr"
+            )
         ]
         # Execute commands and store the result
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="urls", execution_style="sequential")
 
         logger.debug(f"Urls arranged for {domain}")
 
+def start_urls_scan(group_name, domain_list, execution_style, config):
+
+    url_enum = config
+    
+    if not url_enum.get("run", False):
+        print("Subdomain enumeration is disabled.")
+        return
+    include_api = url_enum.get("includeApi", False)
+    tool_selection = url_enum.get("toolSelection", False)
+    selected_tools = url_enum.get("selectedTools", [])
 
 
-def func_urls_both(group_name, domain_list, execution_style):
-    func_urls_ps(group_name, domain_list, execution_style)
-    func_urls_ac(group_name, domain_list, execution_style)
+
+    func_urls_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools)
     organise_urls(group_name,domain_list)
     logger.info("URL enumration completed.")
