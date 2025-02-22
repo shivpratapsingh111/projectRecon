@@ -107,7 +107,7 @@ def organise_urls(group_name, domain_list):
                 f"""
                     categories=("ext" "text" "juicy" "docs" "code" "cert" "binaries" "archives")
                     for category in "${{categories[@]}}"; do
-                        success_file="{result_dir}/{extensions_live}"
+                        success_file="{result_dir}/{live_extensions}"
                         failure_file="{result_dir}/{extensions}"
 
                         # Get the URLs for the current category

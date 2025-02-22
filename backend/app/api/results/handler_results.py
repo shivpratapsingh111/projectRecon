@@ -132,10 +132,10 @@ async def download(domain_id):
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/extensions_live") # Dont change extensions_live to extensions-live
+@router.get("/download/{domain_id}/live-extensions")
 async def download(domain_id):
     try:
-        result = await get_download(domain_id, 'extensions_live')
+        result = await get_download(domain_id, 'live_extensions')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")

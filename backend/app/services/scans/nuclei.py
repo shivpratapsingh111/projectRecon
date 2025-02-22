@@ -19,9 +19,9 @@ def start_nuclei_scan(group_name, domain_list, execution_style, nuclei_enum):
         commands = [
             (
                 "nuclei",
-                f"nuclei -l {ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/{subdomains_file} -t ~/nuclei-templates/ -o {result_dir}/{nuclei}",
-                f"{result_dir}/{nuclei}_stdout",
-                f"{result_dir}/logs/{nuclei}"
+                f"nuclei -l {ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/{subdomains_file} -t ~/nuclei-templates/ -o {result_dir}/{nuclei_file}",
+                f"{result_dir}/{nuclei_file}_stdout",
+                f"{result_dir}/logs/{nuclei_file}"
             )
         ]
         

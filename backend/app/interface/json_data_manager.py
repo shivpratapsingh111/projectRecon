@@ -58,11 +58,13 @@ class GroupManager:
             logger.error(f"Error validating file {self.file_path}: {e}")
             raise GroupManagementError(f"File validation error: {e}")
 
-    def _write_to_file(self, data: Dict[str, Any]):
+    def _write_to_file(self, data: Dict[str, Any], file_path = None):
         """Write data to file with proper locking."""
+        if file_path is None:
+            file_path = self.file_path
         try:
             with self.lock:
-                with open(self.file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2)
         except Timeout:
             logger.error("Lock acquisition timeout during write operation")
@@ -71,14 +73,55 @@ class GroupManager:
             logger.error(f"Error writing to file: {e}")
             raise GroupManagementError(f"Write error: {e}")
 
-    def _read_file(self) -> Dict[str, Any]:
+    def update_execution_status(self, group_uuid: str, domain_uuid: str) -> None:
+        """Update the status of the domain and group after execution."""
+        
+        data = self._read_file()
+        group_data = data.get("groups", {}).get(group_uuid)
+        if not group_data:
+            return
+        domain_data = group_data.get("domains", {}).get(domain_uuid, {})
+        if not domain_data:
+            return
+        
+        # Check if all commands in the domain are completed
+        domain_completed = all(cmd["status"] != "running" for cmd in domain_data.get("commands", {}).values())
+        
+        # If domain is completed, update its status
+        if domain_completed:
+            domain_data["status"] = "completed"
+            
+            # Check if all domains in the group are completed
+            group_completed = all(dom.get("status") != "running" for dom in group_data["domains"].values())
+            
+            # If group is completed, update its status
+            if group_completed:
+                group_data["status"] = "completed"
+            else:
+                group_data["status"] = "running"
+
+        
+        # Open file and update only relevant parts
+        with open(self.file_path, "r+") as file:
+            file_data = json.load(file)
+            file_data["groups"][group_uuid]["domains"][domain_uuid]["status"] = domain_data.get("status", "")
+            file_data["groups"][group_uuid]["status"] = group_data.get("status", "")
+            
+            file.seek(0)  # Move cursor to the beginning
+            json.dump(file_data, file, indent=4)
+            file.truncate()  # Remove excess data if file size shrinks
+
+
+    def _read_file(self, file_path = None) -> Dict[str, Any]:
         """Read data from file with proper locking."""
+        if file_path is None:
+            file_path = self.file_path
         try:
             with self.lock:
-                with open(self.file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     if not content:
-                        logger.warning(f"Empty file found during read {self.file_path}")
+                        logger.warning(f"Empty file found during read {file_path}")
                         return {"groups": {}}
                     return json.loads(content)
         except Timeout:
@@ -89,7 +132,7 @@ class GroupManager:
             raise GroupManagementError(f"Read error: {e}")
 
         
-    def create_group(self, group_name: str) -> str:
+    def create_group(self, group_name: str, program_id: str) -> str:
         """
         Create a new group or return existing group UUID.
         
@@ -101,23 +144,23 @@ class GroupManager:
         """
         data = self._read_file()
         
-        # Check if group name already exists
+        
         for group_uuid, group in data['groups'].items():
             if group['group_name'] == group_name:
                 logger.debug(f"Group {group_name} already exists with id {group_uuid}")
                 return group_uuid
         
-        # Create new group if it doesn't exist
-        new_group_uuid = str(uuid.uuid4())
+        new_group_uuid = program_id
         data['groups'][new_group_uuid] = {
             "group_name": group_name,
+            "status": "running",
             "domains": {}
         }
         
         self._write_to_file(data)
         return new_group_uuid
 
-    def add_domain_to_group(self, group_uuid: str, domain_name: str) -> str:
+    def add_domain_to_group(self, group_uuid: str, domain_name: str, domain_id: str) -> str:
         """
         Add a domain to a specific group.
         
@@ -133,15 +176,14 @@ class GroupManager:
         if group_uuid not in data['groups']:
             raise GroupManagementError(f"Group with UUID {group_uuid} not found")
         
-        # Check if domain exists in group
         for domain_uuid, domain in data['groups'][group_uuid]['domains'].items():
             if domain['domain_name'] == domain_name:
                 return domain_uuid
         
-        # Create new domain
-        new_domain_uuid = str(uuid.uuid4())
+        new_domain_uuid = domain_id
         data['groups'][group_uuid]['domains'][new_domain_uuid] = {
             "domain_name": domain_name,
+            "status": "running",
             "commands": {}
         }
         

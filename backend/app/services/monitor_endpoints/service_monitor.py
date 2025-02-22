@@ -62,7 +62,7 @@ class ResponseData:
 
 class FileManager:
     def __init__(self, root_dir: str, scan_name: str):
-        self.result_dir = f"{root_dir}/monitoring/{scan_name}/responses"
+        self.result_dir = f"{root_dir}/{scan_name}/monitoring/responses"
         os.makedirs(self.result_dir, exist_ok=True)
 
     async def sanitize_filename(self, url: str) -> str:

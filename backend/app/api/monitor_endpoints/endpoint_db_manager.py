@@ -259,7 +259,7 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
 
         # Process file input
         if file:
-            scan_dir = f"{ROOT_DATA_DIR}/monitoring/{scan_name}"
+            scan_dir = f"{ROOT_DATA_DIR}/{scan_name}/monitoring"
             file_location = f"{scan_dir}/{file.filename}"
             os.makedirs(scan_dir, exist_ok=True)
             with open(file_location, "wb") as buffer:

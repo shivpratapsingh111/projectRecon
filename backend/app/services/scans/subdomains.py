@@ -20,43 +20,54 @@ db_query = QueryManager
 group_results = {}
 
 
-def organise_subdomains(group_name, domain_list):
+def organise_subdomains(group_name, domain_list, program_id, domain_id_list, httpx, screenshot):
 
-    for domain in domain_list:
+    for domain, domain_id in zip(domain_list, domain_id_list):
         result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         logger.debug(f"Starting to organise Subdomain Enum for {domain}")
 
         commands = [
             (
                 "Organising_Subdomains", 
-                f"""cd {result_dir} ; cat {passive_subdomains} {active_subdomains} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {subdomains_file} ; mv {passive_subdomains} {active_subdomains} bbot/ .tmp/""",
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
-            ),
-            (
-                "Httpx_Subdomains", 
-                f"""cd {result_dir} ; cat {subdomains_file} | /usr/bin/httpx -server -td -sc -title -json -o httpx_subdomains.json 2> /dev/null ; cat httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {live_subdomains}""", 
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
-            ),
-            (
-                "Screenshot Subdomains",
-                f"cd {result_dir} ; nuclei -l {subdomains_file} -rate-limit 25 -bulk-size 5 -concurrency 5 -headless-bulk-size 3 -headless-concurrency 3 -js-concurrency 3 -probe-concurrency 10 -headless -t ~/nuclei-templates/headless/screenshot.yaml",
+                f"""cd {result_dir} ; cat {passive_subdomains} {active_subdomains} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {subdomains_file} ; mv {passive_subdomains} {active_subdomains} bbot/ .tmp/ ; sort -u {subdomains_file} -o {subdomains_file}""",
                 f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
                 f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
             )
-
         ]
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
+        # Add Httpx Subdomains only if `httpx` is True
+        if httpx:
+            commands.append(
+                (
+                    "Httpx_Subdomains", 
+                    f"""cd {result_dir} ; cat {subdomains_file} | /usr/bin/httpx -server -td -sc -title -json -o httpx_subdomains.json 2> /dev/null ; cat httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {live_subdomains}""", 
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
+                )
+            )
+
+        # Add Screenshot Subdomains only if `screenshot` is True
+        if screenshot:
+            commands.append(
+                (
+                    "Screenshot Subdomains",
+                    f"cd {result_dir} ; nuclei -l {subdomains_file} -rate-limit 25 -bulk-size 5 -concurrency 5 -headless-bulk-size 3 -headless-concurrency 3 -js-concurrency 3 -probe-concurrency 10 -headless -t ~/nuclei-templates/headless/screenshot.yaml",
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}", 
+                    f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
+                )
+            )
+
+        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="subdomains", execution_style="sequential")
         logger.debug(f"Organising Subdomains [Completed] [{domain}]")
-        logger.debug(f"Httpx Subdomains [Completed] [{domain}]")
-        logger.debug(f"Screenshot [Completed] [{domain}]")
+        if httpx:
+            logger.debug(f"Httpx Subdomains [Completed] [{domain}]")
+        if screenshot:
+            logger.debug(f"Screenshot [Completed] [{domain}]")
 
 
-def func_subdomains_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools):
+def func_subdomains_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_id, domain_id_list):
     group_results = {}
     
-    for domain in domain_list:
+    for domain, domain_id in zip(domain_list, domain_id_list):
         result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         os.makedirs(result_dir, exist_ok=True)
         os.makedirs(f"{result_dir}/.logs", exist_ok=True)
@@ -137,7 +148,7 @@ def func_subdomains_ps(group_name, domain_list, execution_style, include_api, to
         else:
             commands = all_commands
             
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style=execution_style)
+        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="subdomains", execution_style=execution_style)
  
     
         command = f"cd {result_dir} ; cp bbot/subdomains.txt {bbot} ; cat {bbot} {subdominator} {subfinder} {cero} {sublist3r} {yass} {githubsubdomains} {gitlabsubdomains} > {passive_subdomains} ; sort -u {passive_subdomains} -o {passive_subdomains} ; mv {bbot} {subdominator} {subfinder} {cero} {sublist3r} {yass} {githubsubdomains} {gitlabsubdomains} .tmp/" 
@@ -153,10 +164,10 @@ def func_subdomains_ps(group_name, domain_list, execution_style, include_api, to
         logger.info(f"Passive Subdomains completed for {domain}")
 
 
-def func_subdomains_ac(group_name, domain_list, execution_style):
+def func_subdomains_ac(group_name, domain_list, execution_style, program_id, domain_id_list):
     group_results = {}
     
-    for domain in domain_list:
+    for domain, domain_id in zip(domain_list, domain_id_list):
         result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains"
         os.makedirs(result_dir, exist_ok=True)
         
@@ -169,7 +180,7 @@ def func_subdomains_ac(group_name, domain_list, execution_style):
                 f"{result_dir}/.logs/{alterx.removesuffix('.txt')}_stderr"
             )
         ]
-        group_results[domain] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style=execution_style)
+        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="subdomains", execution_style=execution_style)
         
         # Second command: DNS resolver (DO NOT MERGE THIS IN ABOVE: this command will resolve subdomains permuted, so it has to run only after permutations has done)
         commands = [
@@ -180,28 +191,42 @@ def func_subdomains_ac(group_name, domain_list, execution_style):
                 f"{result_dir}/.logs/{active_subdomains}"
             )
         ]
-        group_results[f"{domain}_dnsresolver"] = run_commands(group_name, domain, commands, scan_dir="subdomains", execution_style="sequential")
+        group_results[f"{domain}_dnsresolver"] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="subdomains", execution_style="sequential")
         
         logger.info(f"Active Subdomains completed for {domain}")
 
 
-def check_and_insert_program(domain_list):
-    for program in domain_list:
-        program_data = {
-        "program_name": program,
-        "program_url": None,
-        "acquisitions": [""],
-        "email": None,
-        "report_form": None
-        }
-        exists = db_ops.query_operations().check_program_exists(program)
+def check_and_insert_program_and_target(group_name, domain_list):
+    
+    program_data = {
+    "program_name": group_name,
+    "program_url": None,
+    "acquisitions": [""],
+    "email": None,
+    "report_form": None
+    }
+    domain_id_list= []
+    exists = db_ops.query_operations().check_program_exists(group_name)
+    if exists:
+        program_id = db_ops.query_operations().get_program_id(group_name)
+        logger.debug(f"Program exists [{group_name}]-[{program_id}]")
+    else:
+        program_id = db_ops.insert_operations().insert_program(program_data)
+        logger.debug(f"New program [{group_name}] created with id {program_id}")
+    
+    for domain in domain_list:
+        exists = db_ops.query_operations().check_web_target_exists(domain)
         if exists:
-            logger.debug("Program exists")
-            return
+            domain_id = db_ops.query_operations().get_web_target_id(domain)
+            logger.debug(f"Domain [{domain}] exists in DB [{domain_id}]")
+            domain_id_list.append(domain_id)
         else:
-            program_id = db_ops.insert_operations().insert_program(program_data)
-            logger.debug(f"New program created with id {program_id}")
-            return program_id
+            domain_id = db_ops.insert_operations().insert_web_target_new(program_id, domain)
+            domain_id_list.append(domain_id)
+            logger.debug(f"New Domain [{domain}] inserted in DB with id {domain_id}")
+    
+    logger.debug(f"All Targets inserted in DB with IDs {domain_id_list}")
+    return program_id, domain_id_list
 
 
 def read_subdomains_from_file(file_path):
@@ -222,11 +247,7 @@ def update_subdomains_to_db(group_name, domain_list):
 
         if os.path.exists(file_path):
             subdomains = read_subdomains_from_file(file_path)
-            program_id = db_ops.query_operations().get_program_id(domain)
-            program_id_str = uuid.UUID(program_id[0][0])
-            program_id = str(program_id_str)
-            logger.debug(f"Program ID fetched: {program_id}")
-
+            program_id = str(db_ops.query_operations().get_program_id(group_name))
 
             with psycopg2.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
@@ -245,32 +266,29 @@ def read_jsonl_file(file_path):
     with open(file_path, "r") as file:
         return [json.loads(line) for line in file]
 
-UPDATE_WEB_TARGETS_DATA = db_query.UPDATE_WEB_TARGETS_DATA
-
 def update_httpx_subdomains_to_db(group_name, domain_list):
     for domain in domain_list:
         file_path = f"{ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/{httpx_subdomains}"
         
-        if os.path.exists(file_path):
-            subdomains_data = read_jsonl_file(file_path)
-            with psycopg2.connect(**db_config) as conn:
-                with conn.cursor() as cursor:
-                    for entry in subdomains_data:
-                        values = (
-                            entry.get("tech", []),
-                            entry.get("status_code"),
-                            entry.get("port"),
-                            entry.get("host"),
-                            entry.get("a", []),
-                            entry.get("aaaa", []),
-                            entry.get("time"),
-                            entry.get("webserver"),
-                            entry.get("input")
-                        )
-                        cursor.execute(UPDATE_WEB_TARGETS_DATA, values)
-                    
-                    conn.commit()
-                    logger.debug(f"All subdomains data updated to DB. [Count: {len(subdomains_data)}]")
+        try:
+            if os.path.exists(file_path):
+                subdomains_data = read_jsonl_file(file_path)
+                for entry in subdomains_data:
+                    values = (
+                        entry.get("tech", []),
+                        entry.get("status_code"),
+                        entry.get("port"),
+                        entry.get("host"),
+                        entry.get("a", []),
+                        entry.get("aaaa", []),
+                        entry.get("time"),
+                        entry.get("webserver"),
+                        entry.get("input")
+                    )
+                    db_ops.update_operations().update_web_targets_data(values)
+        except Exception as e:
+            logger.exception(f"Error occured while updating HTTPX subdomains data. {e}")        
+            logger.debug(f"All subdomains data updated to DB. [Count: {len(subdomains_data)}]")
 
             
 def start_subdomains_scan(group_name, domain_list, execution_style, config):
@@ -281,17 +299,21 @@ def start_subdomains_scan(group_name, domain_list, execution_style, config):
         return
     include_api = subdomain_enum.get("includeApi", False)
     tool_selection = subdomain_enum.get("toolSelection", False)
+    httpx = subdomain_enum.get("httpx", False)
+    screenshot = subdomain_enum.get("screenshot", False)
     selected_tools = subdomain_enum.get("selectedTools", [])
 
     logger.debug("Checking program details in DB")
-    check_and_insert_program(domain_list)
+    # check_and_insert_program(domain_list)
+    program_id, domain_id_list = check_and_insert_program_and_target(group_name, domain_list)
     
     logger.debug("Executing: start_subdomains_scan")
-    func_subdomains_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools)
+    func_subdomains_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_id, domain_id_list)
     
     if subdomain_enum.get("dnsBruteforce", False):
-        func_subdomains_ac(group_name, domain_list, execution_style)
+        func_subdomains_ac(group_name, domain_list, execution_style, program_id, domain_id_list)
     
-    organise_subdomains(group_name,domain_list)
+    organise_subdomains(group_name, domain_list, program_id, domain_id_list, httpx, screenshot)
     update_subdomains_to_db(group_name, domain_list)
-    update_httpx_subdomains_to_db(group_name, domain_list)
+    if httpx:
+        update_httpx_subdomains_to_db(group_name, domain_list)

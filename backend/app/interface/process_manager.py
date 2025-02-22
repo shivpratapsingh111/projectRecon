@@ -261,7 +261,8 @@ class CommandExecutor:
                 logger.debug(f"Successfully sent termination signal to process with PID: {pid}")
                 return True
             
-            logger.error(f"No running process found with PID: {pid}")
+            logger.info(f"No running process found with PID: {pid}")
+            self._update_process_status(pid, 'error')
             return False
             
         except ProcessLookupError:
@@ -316,12 +317,11 @@ class CommandExecutor:
             logger.error(f"Error killing processes for group {group_uuid}: {str(e)}")
             return killed_pids
 
-    def execute_commands(self, group_name: str, domain: str, commands: List[Tuple], 
-                        scan_dir: str, execution_style: Literal['sequential', 'parallel'] = 'sequential') -> None:
+    def execute_commands(self, group_name: str, domain: str, commands: List[Tuple], program_id: str, domain_id: str, scan_dir: str, execution_style: Literal['sequential', 'parallel'] = 'sequential') -> None:
         """Execute commands either sequentially or in parallel."""
         try:
-            group_uuid = self.group_manager.create_group(group_name)
-            domain_uuid = self.group_manager.add_domain_to_group(group_uuid, domain)
+            self.group_manager.create_group(group_name, program_id)
+            self.group_manager.add_domain_to_group(program_id, domain, domain_id)
             self._create_directories(group_name, domain, scan_dir)
             
             if execution_style == 'parallel':
@@ -329,18 +329,21 @@ class CommandExecutor:
                 for cmd_name, cmd, stdout_path, stderr_path in commands:
                     thread = threading.Thread(
                         target=self._execute_single_command,
-                        args=(cmd_name, cmd, stdout_path, stderr_path, group_uuid, domain_uuid)
+                        args=(cmd_name, cmd, stdout_path, stderr_path, program_id, domain_id)
                     )
                     threads.append(thread)
                     thread.start()
                 
                 for thread in threads:
                     thread.join()
+
             else:
                 for cmd_name, cmd, stdout_path, stderr_path in commands:
                     self._execute_single_command(cmd_name, cmd, stdout_path, stderr_path, 
-                                              group_uuid, domain_uuid)
+                                              program_id, domain_id)
                     
+            self.group_manager.update_execution_status(program_id, domain_id)
+
         except Exception as e:
             logger.error(f"Error in execute_commands: {str(e)}")
             raise
@@ -351,8 +354,8 @@ class CommandExecutor:
         with self.file_lock:
             return self.group_manager._read_file()
 
-def run_commands(group_name: str, domain: str, commands: List[Tuple], scan_dir: str, 
-                execution_style: Literal['sequential', 'parallel'] = 'sequential') -> None:
+def run_commands(group_name: str, domain: str, commands: List[Tuple], program_id: str, domain_id: str, scan_dir: str, 
+                execution_style: Literal['sequential', 'parallel'] = 'sequential',) -> None:
     """Main function to run commands."""
     executor = CommandExecutor()
-    executor.execute_commands(group_name, domain, commands, scan_dir, execution_style)
+    executor.execute_commands(group_name, domain, commands, program_id, domain_id, scan_dir, execution_style)

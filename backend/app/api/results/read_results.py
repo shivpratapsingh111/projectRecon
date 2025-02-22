@@ -132,10 +132,11 @@ async def http_fetch_results(domain_id: str, file_type: str, limit: Optional[int
     file_mapping = {
         "urls": base_path / f"urls/{urls_file}",
         "extensions": base_path / f"urls/{extensions}",
-        "extensions_live": base_path / f"urls/{extensions_live}",
+        "live_extensions": base_path / f"urls/{live_extensions}",
         "subdomains": base_path / f"subdomains/{subdomains_file}",
         "live_subdomains": base_path / f"subdomains/{live_subdomains}",
-        "httpx_subdomains": base_path / f"subdomains/{httpx_subdomains}"
+        "httpx_subdomains": base_path / f"subdomains/{httpx_subdomains}",
+        "nuclei": base_path / f"nuclei/{nuclei_file}"
     }
 
     file_path = file_mapping.get(file_type)

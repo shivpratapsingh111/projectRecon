@@ -12,6 +12,7 @@ from app.api.mail_reports import handler_report
 from app.api.add import handler_add
 from app.api.monitor_endpoints import handler_monitor
 from app.api.results import handler_results
+from app.api.summary import handler_summary
 
 from app.config.db_config import db_config
 from app.api.scan import handler_scan
@@ -45,6 +46,7 @@ app.include_router(handler_add.router, prefix="/add", tags=["Add"])
 app.include_router(handler_report.router, tags=["Report"])
 app.include_router(handler_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
 app.include_router(handler_results.router, prefix="/results", tags=["Results"])
+app.include_router(handler_summary.router, prefix="/summary", tags=["Summary"])
 
 
 

@@ -103,6 +103,23 @@ class EndpointInsertOperations:
         except Exception as e:
             logger.exception(f"Failed to insert web target data {str(web_target_data['target_domain'])} : {str(e)}")
             raise
+
+    def insert_web_target_new(self, program_id, target_name):
+        """
+        Insert web target
+        Returns id
+        Example: 10499b38-3036-4d21-b693-3f1e74dea425
+        """
+        try:
+            target_id = self.db.execute_query(QueryManager.INSERT_WEB_TARGET_NEW, (program_id, target_name))
+            logger.info(f"Web Target inserted successfully - [{target_name}]")
+            return target_id[0]
+            
+        except Exception as e:
+            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_id}]: {str(e)}")
+            raise
+
+
     def insert_mobile_target(self, mobile_target_data: Dict):
         try:
             params = (
@@ -187,6 +204,14 @@ class EndpointUpdateOperations:
             self.db.execute_query(QueryManager.UPDATE_MOBILE_TARGET_DATA, params)
         except Exception as e:
             logger.exception(f"Failed to update mobile target vulnerability {id}: {str(e)}")
+            raise
+
+    def update_web_targets_data(self, values: Dict):
+        """Update web targets data"""
+        try:
+            self.db.execute_query(QueryManager.UPDATE_WEB_TARGETS_DATA, values)
+        except Exception as e:
+            logger.exception(f"Failed to update web targets data {id}: {str(e)}")
             raise
 
 
@@ -345,14 +370,91 @@ class EndpointQueryOperations:
             raise
 
     def get_program_id(self, program_name) -> List[Dict]:
-        """Get program name from program id
+        """
+        Get program name from program id
+        Returns program_id
+        Example: 1fd2a300-8646-455a-9d0b-c090deae67d4
         """
         try:
             result = self.db.execute_query(QueryManager.GET_PROGRAM_ID, (program_name,))
+            if result != []:
+                return result[0][0]
+            else:
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to get program id for [{program_name}]: {str(e)}")
+            raise
+
+    def get_web_target_id(self, target_domain) -> List[Dict]:
+        """Returns web target ID by searching from target domain
+           Returns: id
+           Example: 8bc2d48a-e09a-4800-ab80-580cc62063b2
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_WEB_TARGET_ID, (target_domain,))
+            return result[0][0]
+        except Exception as e:
+            logger.exception(f"Failed to web target id [{target_domain}]: {str(e)}")
+            raise
+
+    def get_web_targets_count(self) -> List[Dict]:
+        """ Get total web targets count 
+            Returns: count of web targets
+            Example: 2450
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_WEB_TARGETS_COUNT, None)
+            if result != []:
+                return result[0][0]
+            else:
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to get web targets count: {str(e)}")
+            raise
+
+
+    def get_specifc_web_targets_count(self, program_id) -> List[Dict]:
+        """ Get total web targets count of specifc program
+            Returns: count of web targets
+            Example: 203
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_SPECIFIC_WEB_TARGETS_COUNT, (program_id,))
+            if result != []:
+                return result[0][0]
+            else:
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to get web targets count: {str(e)}")
+            raise
+
+    def get_programs_count(self) -> List[Dict]:
+        """ Get total programs count 
+            Returns: count of programs
+            Example: 10
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_PROGRAMS_COUNT, None)
+            if result != []:
+                return result[0][0]
+            else:
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to get programs count: {str(e)}")
+            raise
+
+    def get_endpoints_count(self) -> List[Dict]:
+        """ Get count of endpoints with active and stopped monitoring 
+            Returns: [(count of active, count of stopped)]
+            Example: [(3, 5)]
+            Means it has 3 active endpoints and 5 stopped.
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_ENDPOINTS_COUNT, None)
             if result != []:
                 return result
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get program id for [{program_name}]: {str(e)}")
+            logger.exception(f"Failed to get endpoints count: {str(e)}")
             raise

@@ -73,10 +73,10 @@ async def get_download(domain_id, file_name):
 		file_path=f"{urls_directory_path}/{urls_file}"
 	elif file_name == "extensions":
 		file_path=f"{urls_directory_path}/{extensions}"
-	elif file_name == "extensions_live":
-		file_path=f"{urls_directory_path}/{extensions_live}"
+	elif file_name == "live_extensions":
+		file_path=f"{urls_directory_path}/{live_extensions}"
 	elif file_name == "nuclei":
-		file_path=f"{nuclei_directory_path}/{nuclei}"
+		file_path=f"{nuclei_directory_path}/{nuclei_file}"
 
 	try:
 		if file_path and os.path.exists(file_path):

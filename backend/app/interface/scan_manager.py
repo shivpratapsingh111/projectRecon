@@ -6,7 +6,9 @@ from app.services.scans.nuclei import start_nuclei_scan
 import os
 from app.logger.logger import setup_logger
 from app.config.db_config import db_config
+from app.interface.json_data_manager import GroupManager
 
+group_manager = GroupManager()
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
 
@@ -48,6 +50,7 @@ def run_scans(group_name, domain_list, execution_style, scan_config):
     nmap_enum = scan_config.get("nmap", {})
     js_enum = scan_config.get("js", {})
     
+
     if not subdomain_enum.get("run", False):
         logger.info("Subdomain enumeration is disabled.")
     else:
@@ -78,6 +81,6 @@ def run_scans(group_name, domain_list, execution_style, scan_config):
         logger.warning("js is not configured yet.")
         completed_scans.add("JS")
 
-    logger.info(f"Scans executed successfully [{list(completed_scans)}]")
+    logger.info(f"Scans executed successfully {list(completed_scans)}")
 
 # run_scans(group_name="group-1", domain_list=['thecyberboy.com'], execution_style="parallel", scan_config=config)

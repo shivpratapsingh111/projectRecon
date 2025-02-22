@@ -1,91 +1,34 @@
+import json  
+from app.interface.json_data_manager import GroupManager
+group_manager = GroupManager()
+
+def update_execution_status(self, group_uuid: str, domain_uuid: str) -> None:
+    """Update the status of the domain and group after execution."""
+    
+    data = self._read_file()
+    group_data = data.get("groups", {}).get(group_uuid)
+    if not group_data:
+        return
+    domain_data = group_data.get("domains", {}).get(domain_uuid, {})
+    if not domain_data:
+        return
+    
+    # Check if all commands in the domain are completed
+    domain_completed = all(cmd["status"] != "running" for cmd in domain_data.get("commands", {}).values())
+    
+    # If domain is completed, update its status
+    if domain_completed:
+        domain_data["status"] = "completed"
         
-# List of selected tools to run
-selected_tools = ["bbot", "subfinder", "cero"]  # Modify this array as needed
-result_dir = "sss"
-domain = "asdasd"
-
-
-if not subdomain_enum.get("run", False):
-    print("Subdomain enumeration is disabled.")
-    return
-
-
-include_api = subdomain_enum.get("includeApi", False)
-tool_selection = subdomain_enum.get("toolSelection", False)
-selected_tools = subdomain_enum.get("selectedTools", [])
-
-
-cmd = {
-    "bbot": f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} -y --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv github_codesearch github_org httpx hunterio internetdb ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar --exclude-modules dnsbrute dnsbrute_mutations wayback",
-    "subdominator": f"subdominator -d {domain} --no-color --disable-update-check -o {result_dir}/{subdominator}" + (" --config-path ~/.config/projectRecon/api-subdominator.txt" if include_api else ""),
-    "subfinder": f"subfinder -d {domain} -sources chinaz,columbus,github,hunter,robtex,threatbook,whoisxmlapi,zoomeyeapi,virustotal,shodan,securitytrails,fofa,chaos,certspotter,censys,binaryedge,bevigil -no-color -disable-update-check -o {result_dir}/{subfinder}" + (" -provider-config ~/.config/projectRecon/api-subfinder.txt" if include_api else ""),
+        # Check if all domains in the group are completed
+        group_completed = all(dom.get("status") != "running" for dom in group_data["domains"].values())
+        
+        # If group is completed, update its status
+        if group_completed:
+            group_data["status"] = "completed"
+        else:
+            group_data["status"] = "running"
     
-    "cero": f"cero {domain} | tee -a {result_dir}/{cero}",
     
-    "sublist3r": f"cd ~/tools/Sublist3r && python3 sublist3r.py -d {domain} -o {result_dir}/{sublist3r}",
     
-    "yass": f"yass {domain} -nc | tee -a {result_dir}/{yass}",
-    
-    "githubsubdomains": f"github-subdomains -d {domain} -raw -o {result_dir}/{githubsubdomains}",
-    
-    "gitlabsubdomains": f"github-subdomains -d {domain} | tee -a {result_dir}/{gitlabsubdomains}",
-}
-    
-
-# Define all available commands
-all_commands = [
-    (
-        "bbot",
-        f"{cmd.get('bbot_cmd')}",
-        f"{result_dir}/.logs/s_stdout",
-        f"{result_dir}/.logs/sstderr"
-    ),
-    (
-        "subdominator",
-        f"{cmd.get('subdominator_cmd')}",
-        f"{result_dir}/.logs/s_stdout",
-        f"{result_dir}/.logs/s_stderr"
-    ),
-    (
-        "subfinder",
-        f"{cmd.get('subfinder_cmd')}",
-        f"{result_dir}/.logs/s_stdout",
-        f"{result_dir}/.logs/s_stderr"
-    ),
-    (
-        "cero",
-        f"{cmd.get('cero_cmd')}",
-        f"{result_dir}/.logs/_stdout",
-        f"{result_dir}/.logs/_stderr"
-    ),
-    (
-        "sublist3r",
-        f"{cmd.get('sublist3r_cmd')}",
-        f"{result_dir}/.logs/stdout",
-        f"{result_dir}/.logs/stderr"
-    ),
-    (
-        "yass",
-        f"{cmd.get('yass_cmd')}",
-        f"{result_dir}/.logs/_stdout",
-        f"{result_dir}/.logs/_stderr"
-    ),
-    (
-        "githubsubdomains",
-        f"{cmd.get('githubsubdomains_cmd')}",
-        f"{result_dir}/.logs/stdout",
-        f"{result_dir}/.logs/stderr"
-    ),
-    (
-        "gitlabsubdomains",
-        f"{cmd.get('gitlabsubdomains_cmd')}",
-        f"{result_dir}/.logs/_stdout",
-        f"{result_dir}/.logs/_stderr"
-    )
-]
-
-# Filter commands based on selected tools
-commands = [cmd for cmd in all_commands if cmd[0] in selected_tools]
-
-# Execute selected commands
-print(commands)
+update_execution_status("c06506a6-0d22-49be-acaf-2dc3833c78b6", "93b587a8-8ed6-4e33-bc5d-62a65108cfa5")

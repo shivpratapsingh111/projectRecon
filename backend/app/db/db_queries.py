@@ -92,6 +92,13 @@ class QueryManager:
         INSERT INTO web_targets (program_id, target_domain, technology, status_code, port, host, ipv4, ipv6, response_time, webserver, vulnerability_reported, created_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
+    INSERT_WEB_TARGET_NEW = """
+        INSERT INTO web_targets (program_id, target_domain) 
+        VALUES (%s, %s) 
+        ON CONFLICT (target_domain) 
+        DO UPDATE SET program_id = EXCLUDED.program_id 
+        RETURNING id;
+    """
     INSERT_MOBILE_TARGET = """
         INSERT INTO mobile_targets (program_id, target_package, target_apk, technology, download_url, vulnerability_reported, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
@@ -181,13 +188,34 @@ class QueryManager:
         FROM programs
         WHERE program_name = %s
     """
+    GET_WEB_TARGET_ID = """
+        SELECT 
+            id
+        FROM web_targets
+        WHERE target_domain = %s
+    """
+    GET_WEB_TARGETS_COUNT = """
+        SELECT COUNT(*) FROM web_targets;
+    """
+    GET_SPECIFIC_WEB_TARGETS_COUNT = """
+        SELECT COUNT(*) FROM web_targets WHERE program_id = %s;
+    """
+    GET_ENDPOINTS_COUNT = """
+        SELECT 
+            COUNT(*) FILTER (WHERE status = 'active') AS active_count,
+            COUNT(*) FILTER (WHERE status = 'stopped') AS stopped_count
+        FROM monitor_endpoints;
+    """
+    GET_PROGRAMS_COUNT = """
+        SELECT COUNT(*) FROM programs;
+    """
     
     # --- Report ---
     GET_PROGRAM_DATA_BY_ID = """
         SELECT * FROM programs WHERE id = %s
     """    
     GET_PROGRAM_DATA_BY_NAME = """
-        SELECT * FROM programs WHERE program_name ILIKE %s
+        SELECT * FROM programs WHERE program_name = %s
     """   
     GET_PROGRAM_DATA_BY_ID = """
         SELECT * FROM programs WHERE id = %s
@@ -199,21 +227,21 @@ class QueryManager:
         SELECT * FROM mobile_targets WHERE id = %s
     """
     GET_MOBILE_TARGET_BY_NAME = """
-        SELECT * FROM mobile_targets WHERE target_package ILIKE %s
+        SELECT * FROM mobile_targets WHERE target_package = %s
     """
     CHECK_PROGRAM_EXISTS = """
-        SELECT EXISTS (SELECT 1 FROM programs WHERE program_name ILIKE %s)
+        SELECT EXISTS (SELECT 1 FROM programs WHERE program_name = %s)
     """
     CHECK_MOBILE_TARGET_EXISTS = """
-        SELECT EXISTS (SELECT 1 FROM mobile_targets WHERE target_package ILIKE %s)
+        SELECT EXISTS (SELECT 1 FROM mobile_targets WHERE target_package = %s)
     """
     CHECK_WEB_TARGET_EXISTS = """
-        SELECT EXISTS (SELECT 1 FROM web_targets WHERE target_domain ILIKE %s)
+        SELECT EXISTS (SELECT 1 FROM web_targets WHERE target_domain = %s)
     """
     CHECK_MOBILE_TARGET_VULN_EXISTS = """
     SELECT %s = ANY(vulnerability_reported) 
     FROM mobile_targets 
-    WHERE target_package ILIKE %s
+    WHERE target_package = %s
     """
     
 # ---

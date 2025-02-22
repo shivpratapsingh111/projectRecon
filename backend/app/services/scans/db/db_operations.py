@@ -60,6 +60,16 @@ class EndpointInsertOperations:
             raise
 
 
+    def insert_web_target(self, program_id, target_name):
+        """Insert web target"""
+        try:
+            self.db.execute_query(QueryManager.INSERT_WEB_TARGETS, (program_id, target_name))
+            logger.info(f"Web Target inserted successfully - [{target_name}]")
+            
+        except Exception as e:
+            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_id}]: {str(e)}")
+            raise
+
 class EndpointUpdateOperations:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
@@ -81,4 +91,16 @@ class EndpointQueryOperations:
             return result
         except Exception as e:
             logger.exception(f"Failed to get scan names: {str(e)}")
+            raise
+
+    def get_web_target_id(self, target_domain) -> List[Dict]:
+        """Returns web target ID by searching from target domain
+           Returns: id
+           Example: 8bc2d48a-e09a-4800-ab80-580cc62063b2
+        """
+        try:
+            result = self.db.execute_query(QueryManager.GET_WEB_TARGET_ID, (target_domain,))
+            return result[0][0]
+        except Exception as e:
+            logger.exception(f"Failed to web target id [{target_domain}]: {str(e)}")
             raise
