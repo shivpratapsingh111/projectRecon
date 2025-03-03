@@ -234,7 +234,7 @@ class CommandExecutor:
             }
             self.group_manager.add_command_to_domain(group_uuid, domain_uuid, command_details)
 
-    def kill_process_by_pid(self, pid) -> bool:
+    def kill_process_by_pid(self, pid, type) -> bool:
         """Kill a specific process by PID."""
         try:
             pid = int(pid)
@@ -259,10 +259,17 @@ class CommandExecutor:
                 
                 os.kill(pid, signal.SIGTERM)
                 logger.debug(f"Successfully sent termination signal to process with PID: {pid}")
+                self._update_process_status(pid, 'killed')
                 return True
             
+            if type == "domain":
+                self._update_process_status(pid, 'killed')
+                return True
+            if type == "domain":
+                self._update_process_status(pid, 'killed')
+                return True
+
             logger.info(f"No running process found with PID: {pid}")
-            self._update_process_status(pid, 'error')
             return False
             
         except ProcessLookupError:
@@ -273,7 +280,7 @@ class CommandExecutor:
             return "Error in killing"
 
 
-    def kill_domain_processes(self, domain_uuid: str) -> List[int]:
+    def kill_domain_processes(self, group_uuid, domain_uuid: str) -> List[int]:
         """Kill all processes running under a domain."""
         killed_pids = []
         try:
@@ -283,12 +290,14 @@ class CommandExecutor:
             
             for pid_str, process_info in domain_processes.items():
                 pid = int(pid_str)
-                if self.kill_process_by_pid(pid) == True:
+                if self.kill_process_by_pid(pid, "domain") == True:
                     killed_pids.append(pid)
                 else:
                     self._update_process_status(pid, 'error')
             
             logger.debug(f"Killed {len(killed_pids)} processes for domain UUID: {domain_uuid}")
+            self.group_manager.update_domain_status_by_id(group_uuid, domain_uuid, "completed")
+            self.group_manager.update_group_status_by_id(group_uuid, "completed")
             return killed_pids
             
         except Exception as e:
@@ -305,7 +314,7 @@ class CommandExecutor:
             
             for pid_str, process_info in group_processes.items():
                 pid = int(pid_str)
-                if self.kill_process_by_pid(pid) == True:
+                if self.kill_process_by_pid(pid, "group") == True:
                     killed_pids.append(pid)
                 else:
                     self._update_process_status(pid, 'error')
@@ -320,8 +329,13 @@ class CommandExecutor:
     def execute_commands(self, group_name: str, domain: str, commands: List[Tuple], program_id: str, domain_id: str, scan_dir: str, execution_style: Literal['sequential', 'parallel'] = 'sequential') -> None:
         """Execute commands either sequentially or in parallel."""
         try:
-            self.group_manager.create_group(group_name, program_id)
-            self.group_manager.add_domain_to_group(program_id, domain, domain_id)
+            if not self.group_manager.create_group(group_name, program_id):
+                self.group_manager.update_group_status_by_id(program_id, new_status="running")
+
+            if not self.group_manager.add_domain_to_group(program_id, domain, domain_id):
+                self.group_manager.remove_domain_by_id(program_id, domain_id)
+                self.group_manager.add_domain_to_group(program_id, domain, domain_id)
+
             self._create_directories(group_name, domain, scan_dir)
             
             if execution_style == 'parallel':
@@ -332,6 +346,7 @@ class CommandExecutor:
                         args=(cmd_name, cmd, stdout_path, stderr_path, program_id, domain_id)
                     )
                     threads.append(thread)
+                    time.sleep(1)
                     thread.start()
                 
                 for thread in threads:

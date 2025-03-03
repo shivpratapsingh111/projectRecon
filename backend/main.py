@@ -1,4 +1,3 @@
-from app.api import file_get_all
 from app.config.config  import *
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from typing import List, Optional
@@ -13,6 +12,7 @@ from app.api.add import handler_add
 from app.api.monitor_endpoints import handler_monitor
 from app.api.results import handler_results
 from app.api.summary import handler_summary
+from app.api.terminal import handler_terminal
 
 from app.config.db_config import db_config
 from app.api.scan import handler_scan
@@ -47,6 +47,7 @@ app.include_router(handler_report.router, tags=["Report"])
 app.include_router(handler_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
 app.include_router(handler_results.router, prefix="/results", tags=["Results"])
 app.include_router(handler_summary.router, prefix="/summary", tags=["Summary"])
+app.include_router(handler_terminal.router, prefix="/terminal", tags=["Terminal"])
 
 
 

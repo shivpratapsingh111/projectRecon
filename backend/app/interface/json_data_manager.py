@@ -148,7 +148,7 @@ class GroupManager:
         for group_uuid, group in data['groups'].items():
             if group['group_name'] == group_name:
                 logger.debug(f"Group {group_name} already exists with id {group_uuid}")
-                return group_uuid
+                return False
         
         new_group_uuid = program_id
         data['groups'][new_group_uuid] = {
@@ -158,7 +158,7 @@ class GroupManager:
         }
         
         self._write_to_file(data)
-        return new_group_uuid
+        return True
 
     def add_domain_to_group(self, group_uuid: str, domain_name: str, domain_id: str) -> str:
         """
@@ -178,7 +178,8 @@ class GroupManager:
         
         for domain_uuid, domain in data['groups'][group_uuid]['domains'].items():
             if domain['domain_name'] == domain_name:
-                return domain_uuid
+                logger.debug(f"Domain {domain_name} already exists with id {domain_id}")
+                return False
         
         new_domain_uuid = domain_id
         data['groups'][group_uuid]['domains'][new_domain_uuid] = {
@@ -188,7 +189,7 @@ class GroupManager:
         }
         
         self._write_to_file(data)
-        return new_domain_uuid
+        return True
 
     def add_command_to_domain(self, group_uuid: str, domain_uuid: str, command_details: Dict[str, Any]) -> None:
         """
@@ -403,6 +404,126 @@ class GroupManager:
                         }
         logger.error(f"No command found with PID {pid}")
         raise GroupManagementError(f"No command found with PID {pid}")
+
+
+    def update_group_status_by_id(self, group_id: str, new_status: str) -> Dict[str, Any]:
+        """
+        Update the status of a group based on its Group ID.
+
+        Args:
+            group_id (str): UUID of the group
+            new_status (str): New status to set
+
+        Returns:
+            Dict: Details of the updated group
+        """
+        data = self._read_file()
+
+        if group_id in data["groups"]:
+            previous_status = data["groups"][group_id]["status"]
+            data["groups"][group_id]["status"] = new_status
+            
+            self._write_to_file(data)
+
+            return {
+                "group_id": group_id,
+                "previous_status": previous_status,
+                "new_status": new_status
+            }
+
+        logger.error(f"No group found with ID {group_id}")
+        raise GroupManagementError(f"No group found with ID {group_id}")
+
+
+    def update_domain_status_by_id(self, group_id: str, domain_id: str, new_status: str) -> Dict[str, Any]:
+        """
+        Update the status of a domain based on its Group ID and Domain ID.
+
+        Args:
+            group_id (str): UUID of the group
+            domain_id (str): UUID of the domain
+            new_status (str): New status to set
+
+        Returns:
+            Dict: Details of the updated domain
+        """
+        data = self._read_file()
+
+        if group_id in data["groups"]:
+            group = data["groups"][group_id]
+            if domain_id in group["domains"]:
+                previous_status = group["domains"][domain_id]["status"]
+                group["domains"][domain_id]["status"] = new_status
+
+                self._write_to_file(data)
+
+                return {
+                    "group_id": group_id,
+                    "domain_id": domain_id,
+                    "previous_status": previous_status,
+                    "new_status": new_status
+                }
+
+        logger.error(f"No domain found with ID {domain_id} in group {group_id}")
+        raise GroupManagementError(f"No domain found with ID {domain_id} in group {group_id}")
+
+
+    def remove_domain_by_id(self, group_id: str, domain_id: str) -> Dict[str, Any]:
+        """
+        Remove a domain and all its associated commands from a group.
+
+        Args:
+            group_id (str): UUID of the group containing the domain
+            domain_id (str): UUID of the domain to remove
+
+        Returns:
+            Dict: Details of the removed domain
+        """
+        data = self._read_file()
+
+        if group_id in data["groups"]:
+            group = data["groups"][group_id]
+            if domain_id in group["domains"]:
+                removed_domain = group["domains"].pop(domain_id)  # Remove domain
+                
+                self._write_to_file(data)  # Save updated data
+                
+                return {
+                    "group_id": group_id,
+                    "removed_domain_id": domain_id,
+                    "removed_domain_name": removed_domain.get("domain_name", "Unknown"),
+                    "message": "Domain removed successfully"
+                }
+
+        logger.error(f"No domain found with ID {domain_id} in group {group_id}")
+        raise GroupManagementError(f"No domain found with ID {domain_id} in group {group_id}")
+
+    def remove_group_by_id(self, group_id: str) -> Dict[str, Any]:
+        """
+        Remove a group and all its associated domains and commands based on Group ID.
+
+        Args:
+            group_id (str): UUID of the group to remove
+
+        Returns:
+            Dict: Details of the removed group
+        """
+        data = self._read_file()
+
+        if group_id in data["groups"]:
+            removed_group = data["groups"].pop(group_id)  # Remove group
+            
+            self._write_to_file(data)  # Save updated data
+            
+            return {
+                "removed_group_id": group_id,
+                "removed_group_name": removed_group.get("group_name", "Unknown"),
+                "message": "Group removed successfully"
+            }
+
+        logger.error(f"No group found with ID {group_id}")
+        raise GroupManagementError(f"No group found with ID {group_id}")
+
 
     def find_command_by_pid(self, pid: int) -> Dict[str, Any]:
         """

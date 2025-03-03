@@ -1,4 +1,3 @@
-from app.api import file_get_all
 from app.config.config  import *
 from fastapi import APIRouter, Query
 

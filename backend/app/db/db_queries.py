@@ -188,6 +188,11 @@ class QueryManager:
         FROM programs
         WHERE program_name = %s
     """
+    GET_ALL_WEB_TARGETS = """
+        SELECT 
+            target_domain
+        FROM web_targets
+    """
     GET_WEB_TARGET_ID = """
         SELECT 
             id

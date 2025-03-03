@@ -15,15 +15,20 @@ def func_xss_run(group_name, domain_list):
     for domain in domain_list:
         result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/xss"
         os.makedirs(result_dir, exist_ok=True)
-        os.makedirs(f"{result_dir}/logs", exist_ok=True)
+        os.makedirs(f"{result_dir}/.logs", exist_ok=True)
         commands = [
-            ("xss", f"""cat {ROOT_DATA_DIR}/{group_name}/{domain}/{urls_file} | grep = | kxss | grep '>\|<\|"'""", f"{result_dir}/{xssResults}", f"{result_dir}/logs/{xssResults}")
+            (
+                "xss",
+                f"""cat {ROOT_DATA_DIR}/{group_name}/{domain}/{urls_file} | grep = | kxss""",
+                f"{result_dir}/{xssResults}",
+                f"{result_dir}/.logs/{xssResults.removesuffix('.txt')}_stderr")
         ]
         
         # Execute commands and store the result
         group_results[domain] = run_commands(group_name, domain, commands, scan_dir="xss", execution_style="sequential")
- 
-    logger.info(f"Xss scan completed")
+        logger.info(f"[SCAN - XSS] COMPLETED [{group_name} - {domain}]")
+
+    logger.info(f"[SCAN - XSS] COMPLETED [{group_name}]")
     
 
 # DO NOT REMOVE PARAMETER: `execution_style`

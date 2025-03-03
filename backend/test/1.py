@@ -5,4 +5,6 @@ db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)
 
 
-print(db_ops.insert_operations().insert_web_target_new("2d1452ea-3cbd-47dc-8c9d-520cd0618e30", "asddrtsssas.com"))
+result = db_ops.query_operations().get_all_web_targets()
+domain_list = [item[0] for item in result]
+print(domain_list)

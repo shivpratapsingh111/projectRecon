@@ -147,3 +147,45 @@ async def download(domain_id):
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
+
+
+
+@router.get("/download/{domain_id}/js_nuclei") # DONT REPLACE '_' WITH '-' THAT IS INTENTIONAL
+async def download(domain_id):
+    try:
+        result = await get_download(domain_id, 'js_nuclei')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
+
+@router.get("/download/{domain_id}/extracted-urls")
+async def download(domain_id):
+    try:
+        result = await get_download(domain_id, 'extracted_urls')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
+
+@router.get("/download/{domain_id}/extracted-paths")
+async def download(domain_id):
+    try:
+        result = await get_download(domain_id, 'extracted-paths')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
+
+@router.get("/download/{domain_id}/sensitive-data")
+async def download(domain_id):
+    try:
+        result = await get_download(domain_id, 'sensitive_data')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
+
+@router.get("/download/{domain_id}/sensitive-keywords")
+async def download(domain_id):
+    try:
+        result = await get_download(domain_id, 'sensitive_keywords')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")

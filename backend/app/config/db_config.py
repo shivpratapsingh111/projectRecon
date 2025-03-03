@@ -1,5 +1,5 @@
 db_config = {
-    'dbname': 'test_monitor',
+    'dbname': 'main_db',
     'user': 'postgres',
     'password': 'postgres',
     'host': 'localhost'

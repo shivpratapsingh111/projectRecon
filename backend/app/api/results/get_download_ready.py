@@ -61,7 +61,8 @@ async def get_download(domain_id, file_name):
 	
 	urls_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/urls"
 	subdomains_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/subdomains"
-	nuclei_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/other"
+	nuclei_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/nuclei"
+	js_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/js"
 	file_path = None
 	if file_name == "subdomains":
 		file_path=f"{subdomains_directory_path}/{subdomains_file}"
@@ -77,6 +78,16 @@ async def get_download(domain_id, file_name):
 		file_path=f"{urls_directory_path}/{live_extensions}"
 	elif file_name == "nuclei":
 		file_path=f"{nuclei_directory_path}/{nuclei_file}"
+	elif file_name == "js_nuclei":
+		file_path=f"{js_directory_path}/{nuclei_file}"
+	elif file_name == "extracted_urls":
+		file_path=f"{js_directory_path}/{extracted_urls}"
+	elif file_name == "extracted_paths":
+		file_path=f"{js_directory_path}/{extracted_paths}"
+	elif file_name == "sensitive_data":
+		file_path=f"{js_directory_path}/{sensitive_data}"
+	elif file_name == "sensitive_keywords":
+		file_path=f"{js_directory_path}/{sensitive_keywords}"
 
 	try:
 		if file_path and os.path.exists(file_path):

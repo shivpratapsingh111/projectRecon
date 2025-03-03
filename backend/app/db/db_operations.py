@@ -341,6 +341,7 @@ class EndpointQueryOperations:
             logging.exception("An error occurred")
             logger.exception(f"Failed to check if mobile target vulnerability already exists: {str(e)}")
             raise
+
     def get_mobile_target_data(self, target_id=None, target_package=None) -> List[Dict]:
         """Returns mobile target data from target_package name or target_id"""
         try:
@@ -354,6 +355,15 @@ class EndpointQueryOperations:
                 return None
         except Exception as e:
             logger.exception(f"Failed to get mobile target data: {str(e)}")
+            raise
+        
+    def get_all_web_targets(self) -> List[Dict]:
+        """Returns all web targets present in DB"""
+        try:
+                result = self.db.execute_query(QueryManager.GET_ALL_WEB_TARGETS, None)
+                return result
+        except Exception as e:
+            logger.exception(f"Failed to all web targets: {str(e)}")
             raise
         
     def get_program_name(self, program_id) -> List[Dict]:

@@ -136,7 +136,12 @@ async def http_fetch_results(domain_id: str, file_type: str, limit: Optional[int
         "subdomains": base_path / f"subdomains/{subdomains_file}",
         "live_subdomains": base_path / f"subdomains/{live_subdomains}",
         "httpx_subdomains": base_path / f"subdomains/{httpx_subdomains}",
-        "nuclei": base_path / f"nuclei/{nuclei_file}"
+        "nuclei": base_path / f"nuclei/{nuclei_file}",
+        "extracted_urls": base_path / f"js/{extracted_urls}",
+        "extracted_paths": base_path / f"js/{extracted_paths}",
+        "sensitive_data": base_path / f"js/{sensitive_data}",
+        "sensitive_keywords": base_path / f"js/{sensitive_keywords}",
+        "js_nuclei": base_path / f"js/{nuclei_file}"
     }
 
     file_path = file_mapping.get(file_type)

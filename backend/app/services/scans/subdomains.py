@@ -196,39 +196,6 @@ def func_subdomains_ac(group_name, domain_list, execution_style, program_id, dom
         logger.info(f"Active Subdomains completed for {domain}")
 
 
-def check_and_insert_program_and_target(group_name, domain_list):
-    
-    program_data = {
-    "program_name": group_name,
-    "program_url": None,
-    "acquisitions": [""],
-    "email": None,
-    "report_form": None
-    }
-    domain_id_list= []
-    exists = db_ops.query_operations().check_program_exists(group_name)
-    if exists:
-        program_id = db_ops.query_operations().get_program_id(group_name)
-        logger.debug(f"Program exists [{group_name}]-[{program_id}]")
-    else:
-        program_id = db_ops.insert_operations().insert_program(program_data)
-        logger.debug(f"New program [{group_name}] created with id {program_id}")
-    
-    for domain in domain_list:
-        exists = db_ops.query_operations().check_web_target_exists(domain)
-        if exists:
-            domain_id = db_ops.query_operations().get_web_target_id(domain)
-            logger.debug(f"Domain [{domain}] exists in DB [{domain_id}]")
-            domain_id_list.append(domain_id)
-        else:
-            domain_id = db_ops.insert_operations().insert_web_target_new(program_id, domain)
-            domain_id_list.append(domain_id)
-            logger.debug(f"New Domain [{domain}] inserted in DB with id {domain_id}")
-    
-    logger.debug(f"All Targets inserted in DB with IDs {domain_id_list}")
-    return program_id, domain_id_list
-
-
 def read_subdomains_from_file(file_path):
     with open(file_path, "r") as file:
         return [line.strip() for line in file if line.strip()]
@@ -291,7 +258,7 @@ def update_httpx_subdomains_to_db(group_name, domain_list):
             logger.debug(f"All subdomains data updated to DB. [Count: {len(subdomains_data)}]")
 
             
-def start_subdomains_scan(group_name, domain_list, execution_style, config):
+def start_subdomains_scan(group_name, domain_list, execution_style, config, program_id, domain_id_list):
     subdomain_enum = config
     
     if not subdomain_enum.get("run", False):
@@ -304,8 +271,6 @@ def start_subdomains_scan(group_name, domain_list, execution_style, config):
     selected_tools = subdomain_enum.get("selectedTools", [])
 
     logger.debug("Checking program details in DB")
-    # check_and_insert_program(domain_list)
-    program_id, domain_id_list = check_and_insert_program_and_target(group_name, domain_list)
     
     logger.debug("Executing: start_subdomains_scan")
     func_subdomains_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_id, domain_id_list)

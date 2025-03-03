@@ -1,4 +1,3 @@
-from app.api import file_get_all
 from app.config.config  import *
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from typing import List, Optional, Union, Dict
@@ -76,16 +75,16 @@ async def process_scan(
 @router.post("/stop/command/{process_id}")
 async def stop_command_processes(process_id: str):
     try:
-        result = manager.kill_process_by_pid(process_id)
+        result = manager.kill_process_by_pid(process_id, "single")
         return {f"status of {process_id}": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     
-@router.post("/stop/domain/{domain}")
-async def stop_domain_processes(domain: str):
+@router.post("/stop/domain/{group_id}/{domain_id}")
+async def stop_domain_processes(group_id: str, domain_id: str):
     try:
-        result = manager.kill_domain_processes(domain)
-        return {f"status of {domain}": result}
+        result = manager.kill_domain_processes(group_id, domain_id)
+        return {f"status of domain {domain_id} of group {group_id}": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
