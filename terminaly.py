@@ -7,7 +7,7 @@ SESSION_NAME = "sess"
 
 # Ensure tmux session exists
 subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME])
-subprocess.run(["tmux", "send-keys", "-t", SESSION_NAME, "cd backend/ && uvicorn main:app --reload", "C-m"])
+subprocess.run(["tmux", "send-keys", "-t", SESSION_NAME, "cd backend/ && uvicorn main:app --host 0.0.0.0 --port 54755", "C-m"])
 
 async def read_tmux_output(websocket: WebSocket):
     """ Continuously read tmux output and send to the WebSocket client. """
