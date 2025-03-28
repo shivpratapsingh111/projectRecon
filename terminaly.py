@@ -1,20 +1,38 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 import subprocess
+import signal
+import sys
 
 app = FastAPI()
-SESSION_NAME = "sess"
+BACKEND_SESSION = "back"
+FRONTEND_SESSION = "front"
+
+def cleanup():
+    """Kill tmux sessions before exiting."""
+    subprocess.run(["tmux", "kill-session", "-t", BACKEND_SESSION], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    subprocess.run(["tmux", "kill-session", "-t", FRONTEND_SESSION], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
+# Register the cleanup function for program exit and signal handling
+def handle_exit(*args):
+    cleanup()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
 
 # Kill existing tmux session if it exists, then create a new one
-subprocess.run(["tmux", "kill-session", "-t", SESSION_NAME], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME])
-subprocess.run(["tmux", "send-keys", "-t", SESSION_NAME, "cd backend/ && uvicorn main:app --host 0.0.0.0 --port 8000", "C-m"])
+cleanup()
+subprocess.run(["tmux", "new-session", "-d", "-s", BACKEND_SESSION])
+subprocess.run(["tmux", "new-session", "-d", "-s", FRONTEND_SESSION])
+subprocess.run(["tmux", "send-keys", "-t", BACKEND_SESSION, "cd backend/ && uvicorn main:app --host 0.0.0.0 --port 8000", "C-m"])
+subprocess.run(["tmux", "send-keys", "-t", FRONTEND_SESSION, "cd ~/vsCode/pentest-dashboard/ && npm run dev", "C-m"])
 
 async def read_tmux_output(websocket: WebSocket):
     """ Continuously read tmux output and send to the WebSocket client. """
     last_output = ""
     while True:
-        result = subprocess.run(["tmux", "capture-pane", "-p", "-t", SESSION_NAME, "-S-"], capture_output=True, text=True)
+        result = subprocess.run(["tmux", "capture-pane", "-p", "-t", BACKEND_SESSION, "-S-"], capture_output=True, text=True)
         output = result.stdout
         if output != last_output:
             last_output = output
@@ -30,10 +48,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            subprocess.run(["tmux", "send-keys", "-t", SESSION_NAME, data])
+            subprocess.run(["tmux", "send-keys", "-t", BACKEND_SESSION, data])
     except WebSocketDisconnect:
         task.cancel()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8002)
+    finally:
+        cleanup()

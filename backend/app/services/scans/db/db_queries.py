@@ -6,7 +6,7 @@ class QueryManager:
         SELECT program_name FROM programs 
     """
     INSERT_WEB_TARGETS = """
-        INSERT INTO web_targets (program_id, target_domain) 
+        INSERT INTO web_targets (program_uuid, target_domain) 
         VALUES (%s, %s) 
         ON CONFLICT (target_domain) DO NOTHING
     """

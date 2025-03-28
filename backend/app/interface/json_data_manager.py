@@ -1,22 +1,19 @@
 # data_manager.py
 import json
-import uuid
 import os
-import inspect
-import fcntl
+from datetime import datetime
 from filelock import FileLock, Timeout
 
-import time
 from typing import Dict, Any, Optional
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='scan', enable_debug = True)
 from app.config.config import data_file
 
-class GroupManagementError(Exception):
-    """Custom exception for group management operations."""
+class ProgramManagementError(Exception):
+    """Custom exception for program management operations."""
     pass
 
-class GroupManager:
+class ProgramManager:
     def __init__(self):
         self.file_path = data_file
         self.lock_file_path = f"{self.file_path}.lock"
@@ -25,7 +22,7 @@ class GroupManager:
 
     def _initialize_file(self):
         """Create or verify JSON file with proper initial structure."""
-        initial_data = {"groups": {}}
+        initial_data = {"programs": {}}
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
 
         try:
@@ -38,7 +35,7 @@ class GroupManager:
                     self._validate_file()
         except Timeout:
             logger.error(f"Could not acquire lock for {self.file_path} within the timeout period")
-            raise GroupManagementError("Lock acquisition timeout")
+            raise ProgramManagementError("Lock acquisition timeout")
 
     def _validate_file(self):
         """Validate the existing file structure."""
@@ -47,16 +44,16 @@ class GroupManager:
                 content = f.read().strip()
                 if not content:
                     logger.warning(f"Empty file found, reinitializing {self.file_path}")
-                    self._write_to_file({"groups": {}})
+                    self._write_to_file({"programs": {}})
                     return
 
                 data = json.loads(content)
-                if not isinstance(data, dict) or "groups" not in data:
+                if not isinstance(data, dict) or "programs" not in data:
                     logger.error(f"Invalid data structure in {self.file_path}")
-                    raise GroupManagementError("Invalid data structure")
+                    raise ProgramManagementError("Invalid data structure")
         except (json.JSONDecodeError, IOError) as e:
             logger.error(f"Error validating file {self.file_path}: {e}")
-            raise GroupManagementError(f"File validation error: {e}")
+            raise ProgramManagementError(f"File validation error: {e}")
 
     def _write_to_file(self, data: Dict[str, Any], file_path = None):
         """Write data to file with proper locking."""
@@ -68,19 +65,19 @@ class GroupManager:
                     json.dump(data, f, indent=2)
         except Timeout:
             logger.error("Lock acquisition timeout during write operation")
-            raise GroupManagementError("Write operation timeout")
+            raise ProgramManagementError("Write operation timeout")
         except IOError as e:
             logger.error(f"Error writing to file: {e}")
-            raise GroupManagementError(f"Write error: {e}")
+            raise ProgramManagementError(f"Write error: {e}")
 
-    def update_execution_status(self, group_uuid: str, domain_uuid: str) -> None:
-        """Update the status of the domain and group after execution."""
+    def update_execution_status(self, program_uuid: str, target_uuid: str) -> None:
+        """Update the status of the domain and program after execution."""
         
         data = self._read_file()
-        group_data = data.get("groups", {}).get(group_uuid)
-        if not group_data:
+        program_data = data.get("programs", {}).get(program_uuid)
+        if not program_data:
             return
-        domain_data = group_data.get("domains", {}).get(domain_uuid, {})
+        domain_data = program_data.get("domains", {}).get(target_uuid, {})
         if not domain_data:
             return
         
@@ -91,21 +88,21 @@ class GroupManager:
         if domain_completed:
             domain_data["status"] = "completed"
             
-            # Check if all domains in the group are completed
-            group_completed = all(dom.get("status") != "running" for dom in group_data["domains"].values())
+            # Check if all domains in the program are completed
+            program_completed = all(dom.get("status") != "running" for dom in program_data["domains"].values())
             
-            # If group is completed, update its status
-            if group_completed:
-                group_data["status"] = "completed"
+            # If program is completed, update its status
+            if program_completed:
+                program_data["status"] = "completed"
             else:
-                group_data["status"] = "running"
+                program_data["status"] = "running"
 
         
         # Open file and update only relevant parts
         with open(self.file_path, "r+") as file:
             file_data = json.load(file)
-            file_data["groups"][group_uuid]["domains"][domain_uuid]["status"] = domain_data.get("status", "")
-            file_data["groups"][group_uuid]["status"] = group_data.get("status", "")
+            file_data["programs"][program_uuid]["domains"][target_uuid]["status"] = domain_data.get("status", "")
+            file_data["programs"][program_uuid]["status"] = program_data.get("status", "")
             
             file.seek(0)  # Move cursor to the beginning
             json.dump(file_data, file, indent=4)
@@ -122,37 +119,38 @@ class GroupManager:
                     content = f.read().strip()
                     if not content:
                         logger.warning(f"Empty file found during read {file_path}")
-                        return {"groups": {}}
+                        return {"programs": {}}
                     return json.loads(content)
         except Timeout:
             logger.error("Lock acquisition timeout during read operation")
-            raise GroupManagementError("Read operation timeout")
+            raise ProgramManagementError("Read operation timeout")
         except (json.JSONDecodeError, IOError) as e:
             logger.error(f"Error reading file: {e}")
-            raise GroupManagementError(f"Read error: {e}")
+            raise ProgramManagementError(f"Read error: {e}")
 
         
-    def create_group(self, group_name: str, program_id: str) -> str:
+    def create_program(self, program_name: str, program_uuid: str) -> str:
         """
-        Create a new group or return existing group UUID.
+        Create a new program or return existing program UUID.
         
         Args:
-            group_name (str): Name of the group to create
+            program_name (str): Name of the program to create
         
         Returns:
-            str: UUID of the group
+            str: UUID of the program
         """
         data = self._read_file()
         
         
-        for group_uuid, group in data['groups'].items():
-            if group['group_name'] == group_name:
-                logger.debug(f"Group {group_name} already exists with id {group_uuid}")
+        for id, program in data['programs'].items():
+            if program['program_name'] == program_name:
+                logger.debug(f"Program {program_name} already exists with id {program_uuid}")
                 return False
         
-        new_group_uuid = program_id
-        data['groups'][new_group_uuid] = {
-            "group_name": group_name,
+        new_program_uuid = program_uuid
+
+        data['programs'][new_program_uuid] = {
+            "program_name": program_name,
             "status": "running",
             "domains": {}
         }
@@ -160,12 +158,12 @@ class GroupManager:
         self._write_to_file(data)
         return True
 
-    def add_domain_to_group(self, group_uuid: str, domain_name: str, domain_id: str) -> str:
+    def add_domain_to_program(self, program_uuid: str, domain_name: str, target_uuid: str) -> str:
         """
-        Add a domain to a specific group.
+        Add a domain to a specific program.
         
         Args:
-            group_uuid (str): UUID of the group
+            program_uuid (str): UUID of the program
             domain_name (str): Name of the domain to add
         
         Returns:
@@ -173,16 +171,16 @@ class GroupManager:
         """
         data = self._read_file()
         
-        if group_uuid not in data['groups']:
-            raise GroupManagementError(f"Group with UUID {group_uuid} not found")
+        if program_uuid not in data['programs']:
+            raise ProgramManagementError(f"Program with UUID {program_uuid} not found")
         
-        for domain_uuid, domain in data['groups'][group_uuid]['domains'].items():
+        for target_uuid, domain in data['programs'][program_uuid]['domains'].items():
             if domain['domain_name'] == domain_name:
-                logger.debug(f"Domain {domain_name} already exists with id {domain_id}")
+                logger.debug(f"Domain {domain_name} already exists with id {target_uuid}")
                 return False
         
-        new_domain_uuid = domain_id
-        data['groups'][group_uuid]['domains'][new_domain_uuid] = {
+        new_target_uuid = target_uuid
+        data['programs'][program_uuid]['domains'][new_target_uuid] = {
             "domain_name": domain_name,
             "status": "running",
             "commands": {}
@@ -191,80 +189,79 @@ class GroupManager:
         self._write_to_file(data)
         return True
 
-    def add_command_to_domain(self, group_uuid: str, domain_uuid: str, command_details: Dict[str, Any]) -> None:
+    def add_command_to_domain(self, program_uuid: str, target_uuid: str, command_details: Dict[str, Any]) -> None:
         """
-        Add or update a command in a specific domain.
+        Add or append a command to a specific domain.
         
         Args:
-            group_uuid (str): UUID of the group
-            domain_uuid (str): UUID of the domain
+            program_uuid (str): UUID of the program
+            target_uuid (str): UUID of the domain
             command_details (Dict): Details of the command
         """
         data = self._read_file()
         
-        if group_uuid not in data['groups']:
-            logger.error(f"Group with UUID {group_uuid} not found")
-            raise GroupManagementError(f"Group with UUID {group_uuid} not found")
+        if program_uuid not in data['programs']:
+            logger.error(f"Program with UUID {program_uuid} not found")
+            raise ProgramManagementError(f"Program with UUID {program_uuid} not found")
             
-        if domain_uuid not in data['groups'][group_uuid]['domains']:
-            logger.error(f"Domain with UUID {domain_uuid} not found in group")
-            raise GroupManagementError(f"Domain with UUID {domain_uuid} not found in group")
+        if target_uuid not in data['programs'][program_uuid]['domains']:
+            logger.error(f"Domain with UUID {target_uuid} not found in program")
+            raise ProgramManagementError(f"Domain with UUID {target_uuid} not found in program")
         
         command_name = command_details.get('command_name')
         if not command_name:
             logger.error("Command name is required")
-            raise GroupManagementError("Command name is required")
-            
-        # Update or add command
-        data['groups'][group_uuid]['domains'][domain_uuid]['commands'][command_name] = command_details
+            raise ProgramManagementError("Command name is required")
+        
+        data['programs'][program_uuid]['domains'][target_uuid]['commands'][command_name] = command_details
         self._write_to_file(data)
 
-    def get_groups_uuid(self):
+    def get_programs_uuid(self):
         data = self._read_file()
 
-        group_uuids = []
+        program_uuids = []
 
-        for group_uuid in data['groups']:
-            group_uuids.append(group_uuid)
+        for program_uuid in data['programs']:
+            program_uuids.append(program_uuid)
 
-        return group_uuids
+        return program_uuids
 
 
-    def get_group_by_uuid(self, group_uuid: str) -> Dict[str, Any]:
+    def get_program_by_uuid(self, program_uuid: str) -> Dict[str, Any]:
         """
-        Retrieve a group by its UUID.
+        Retrieve a program by its UUID.
         
         Args:
-            group_uuid (str): UUID of the group
+            program_uuid (str): UUID of the program
         
         Returns:
-            Dict: Group details
+            Dict: Program details
         """
         data = self._read_file()
         
-        if group_uuid not in data['groups']:
-            logger.error(f"Group with UUID {group_uuid} not found")
-            raise GroupManagementError(f"Group with UUID {group_uuid} not found")
+        if program_uuid not in data['programs']:
+            logger.error(f"Program with UUID {program_uuid} not found")
+            raise ProgramManagementError(f"Program with UUID {program_uuid} not found")
         
-        return data['groups'][group_uuid]
+        return data['programs'][program_uuid]
 
-    def get_domain_by_uuid(self, domain_uuid: str) -> Dict[str, Any]:
+    def get_domain_by_uuid(self, target_uuid: str) -> Dict[str, Any]:
         """
         Retrieve a domain by its UUID.
         
         Args:
-            domain_uuid (str): UUID of the domain
+            target_uuid (str): UUID of the domain
         
         Returns:
             Dict: Domain details
         """
         data = self._read_file()
         
-        for group in data['groups'].values():
-            if domain_uuid in group['domains']:
-                return group['domains'][domain_uuid]
-        logger.error(f"Domain with UUID {domain_uuid} not found")
-        raise GroupManagementError(f"Domain with UUID {domain_uuid} not found")
+        for program in data['programs'].values():
+            if target_uuid in program['domains']:
+                return program['domains'][target_uuid]
+        logger.error(f"Domain with UUID {target_uuid} not found")
+        raise ProgramManagementError(f"Domain with UUID {target_uuid} not found")
 
     def get_domain_by_name(self, domain_name: str) -> Optional[Dict[str, Any]]:
         """
@@ -274,16 +271,16 @@ class GroupManager:
             domain_name (str): Name of the domain
         
         Returns:
-            Optional[Dict]: Domain details including its UUID and parent group UUID
+            Optional[Dict]: Domain details including its UUID and parent program UUID
         """
         data = self._read_file()
         
-        for group_uuid, group in data['groups'].items():
-            for domain_uuid, domain in group['domains'].items():
+        for program_uuid, program in data['programs'].items():
+            for target_uuid, domain in program['domains'].items():
                 if domain['domain_name'] == domain_name:
                     return {
-                        "group_uuid": group_uuid,
-                        "domain_uuid": domain_uuid,
+                        "program_uuid": program_uuid,
+                        "target_uuid": target_uuid,
                         **domain
                     }
         
@@ -297,69 +294,69 @@ class GroupManager:
             command_name (str): Name of the command
         
         Returns:
-            Dict: Command details including domain and group UUIDs
+            Dict: Command details including domain and program UUIDs
         """
         data = self._read_file()
         
-        for group_uuid, group in data['groups'].items():
-            for domain_uuid, domain in group['domains'].items():
+        for program_uuid, program in data['programs'].items():
+            for target_uuid, domain in program['domains'].items():
                 if command_name in domain['commands']:
                     return {
-                        "group_uuid": group_uuid,
-                        "domain_uuid": domain_uuid,
+                        "program_uuid": program_uuid,
+                        "target_uuid": target_uuid,
                         **domain['commands'][command_name]
                     }
         logger.error(f"Command with name {command_name} not found")
-        raise GroupManagementError(f"Command with name {command_name} not found")
+        raise ProgramManagementError(f"Command with name {command_name} not found")
 
-    def list_groups(self) -> Dict[str, str]:
+    def list_programs(self) -> Dict[str, str]:
         """
-        List all groups with their UUIDs.
+        List all programs with their UUIDs.
         
         Returns:
-            Dict: Mapping of group UUIDs to group names
+            Dict: Mapping of program UUIDs to program names
         """
         data = self._read_file()
-        return {uuid: group['group_name'] for uuid, group in data['groups'].items()}
+        return {uuid: program['program_name'] for uuid, program in data['programs'].items()}
 
-    def list_domains_in_group(self, group_uuid: str) -> Dict[str, str]:
+    def list_domains_in_program(self, program_uuid: str) -> Dict[str, str]:
         """
-        List all domains in a specific group.
+        List all domains in a specific program.
         
         Args:
-            group_uuid (str): UUID of the group
+            program_uuid (str): UUID of the program
         
         Returns:
             Dict: Mapping of domain UUIDs to domain names
         """
-        group = self.get_group_by_uuid(group_uuid)
-        return {uuid: domain['domain_name'] for uuid, domain in group['domains'].items()}
+        program = self.get_program_by_uuid(program_uuid)
+        return {uuid: domain['domain_name'] for uuid, domain in program['domains'].items()}
 
-    def list_commands_in_domain(self, domain_uuid: str) -> Dict[str, Dict[str, Any]]:
+    def list_commands_in_domain(self, target_uuid: str) -> Dict[str, Dict[str, Any]]:
         """
         List all commands in a specific domain.
         
         Args:
-            domain_uuid (str): UUID of the domain
+            target_uuid (str): UUID of the domain
         
         Returns:
             Dict: Mapping of command names to command details
         """
-        domain = self.get_domain_by_uuid(domain_uuid)
+        domain = self.get_domain_by_uuid(target_uuid)
         return domain['commands']
 
-    def get_command_pids_from_domain(self, domain_uuid: str) -> Dict[str, int]:
+    def get_command_pids_from_domain(self, target_uuid: str) -> Dict[str, int]:
         """
         Retrieve the PIDs of all commands within a specific domain.
         
         Args:
-            domain_uuid (str): UUID of the domain
+            target_uuid (str): UUID of the domain
         
         Returns:
             Dict[str, int]: Mapping of command names to their PIDs
         """
         try:
-            domain = self.get_domain_by_uuid(domain_uuid)
+            domain = self.get_domain_by_uuid(target_uuid)
             command_pids = {}
             
             for command_name, command_details in domain.get('commands', {}).items():
@@ -369,9 +366,9 @@ class GroupManager:
             
             return command_pids
 
-        except GroupManagementError as e:
-            logger.exception(f"Error retrieving PIDs for domain {domain_uuid}: {e}")
-            raise GroupManagementError(f"Error retrieving PIDs for domain {domain_uuid}: {e}")
+        except ProgramManagementError as e:
+            logger.exception(f"Error retrieving PIDs for domain {target_uuid}: {e}")
+            raise ProgramManagementError(f"Error retrieving PIDs for domain {target_uuid}: {e}")
 
     def update_command_status_by_pid(self, pid: int, new_status: str) -> Dict[str, Any]:
         """
@@ -386,8 +383,8 @@ class GroupManager:
         """
         data = self._read_file()
         
-        for group_uuid, group in data['groups'].items():
-            for domain_uuid, domain in group['domains'].items():
+        for program_uuid, program in data['programs'].items():
+            for target_uuid, domain in program['domains'].items():
                 for command_name, command_details in domain['commands'].items():
                     if command_details.get('pid') == pid:
                         previous_status = command_details['status']
@@ -396,52 +393,52 @@ class GroupManager:
                         self._write_to_file(data)
                         
                         return {
-                            'group_uuid': group_uuid,
-                            'domain_uuid': domain_uuid,
+                            'program_uuid': program_uuid,
+                            'target_uuid': target_uuid,
                             'command_name': command_name,
                             'previous_status': previous_status,
                             'new_status': new_status
                         }
         logger.error(f"No command found with PID {pid}")
-        raise GroupManagementError(f"No command found with PID {pid}")
+        raise ProgramManagementError(f"No command found with PID {pid}")
 
 
-    def update_group_status_by_id(self, group_id: str, new_status: str) -> Dict[str, Any]:
+    def update_program_status_by_id(self, program_uuid: str, new_status: str) -> Dict[str, Any]:
         """
-        Update the status of a group based on its Group ID.
+        Update the status of a program based on its Program ID.
 
         Args:
-            group_id (str): UUID of the group
+            program_uuid (str): UUID of the program
             new_status (str): New status to set
 
         Returns:
-            Dict: Details of the updated group
+            Dict: Details of the updated program
         """
         data = self._read_file()
 
-        if group_id in data["groups"]:
-            previous_status = data["groups"][group_id]["status"]
-            data["groups"][group_id]["status"] = new_status
+        if program_uuid in data["programs"]:
+            previous_status = data["programs"][program_uuid]["status"]
+            data["programs"][program_uuid]["status"] = new_status
             
             self._write_to_file(data)
 
             return {
-                "group_id": group_id,
+                "program_uuid": program_uuid,
                 "previous_status": previous_status,
                 "new_status": new_status
             }
 
-        logger.error(f"No group found with ID {group_id}")
-        raise GroupManagementError(f"No group found with ID {group_id}")
+        logger.error(f"No program found with ID {program_uuid}")
+        raise ProgramManagementError(f"No program found with ID {program_uuid}")
 
 
-    def update_domain_status_by_id(self, group_id: str, domain_id: str, new_status: str) -> Dict[str, Any]:
+    def update_domain_status_by_id(self, program_uuid: str, target_uuid: str, new_status: str) -> Dict[str, Any]:
         """
-        Update the status of a domain based on its Group ID and Domain ID.
+        Update the status of a domain based on its Program ID and Domain ID.
 
         Args:
-            group_id (str): UUID of the group
-            domain_id (str): UUID of the domain
+            program_uuid (str): UUID of the program
+            target_uuid (str): UUID of the domain
             new_status (str): New status to set
 
         Returns:
@@ -449,80 +446,80 @@ class GroupManager:
         """
         data = self._read_file()
 
-        if group_id in data["groups"]:
-            group = data["groups"][group_id]
-            if domain_id in group["domains"]:
-                previous_status = group["domains"][domain_id]["status"]
-                group["domains"][domain_id]["status"] = new_status
+        if program_uuid in data["programs"]:
+            program = data["programs"][program_uuid]
+            if target_uuid in program["domains"]:
+                previous_status = program["domains"][target_uuid]["status"]
+                program["domains"][target_uuid]["status"] = new_status
 
                 self._write_to_file(data)
 
                 return {
-                    "group_id": group_id,
-                    "domain_id": domain_id,
+                    "program_uuid": program_uuid,
+                    "target_uuid": target_uuid,
                     "previous_status": previous_status,
                     "new_status": new_status
                 }
 
-        logger.error(f"No domain found with ID {domain_id} in group {group_id}")
-        raise GroupManagementError(f"No domain found with ID {domain_id} in group {group_id}")
+        logger.error(f"No domain found with ID {target_uuid} in program {program_uuid}")
+        raise ProgramManagementError(f"No domain found with ID {target_uuid} in program {program_uuid}")
 
 
-    def remove_domain_by_id(self, group_id: str, domain_id: str) -> Dict[str, Any]:
+    def remove_domain_by_id(self, program_uuid: str, target_uuid: str) -> Dict[str, Any]:
         """
-        Remove a domain and all its associated commands from a group.
+        Remove a domain and all its associated commands from a program.
 
         Args:
-            group_id (str): UUID of the group containing the domain
-            domain_id (str): UUID of the domain to remove
+            program_uuid (str): UUID of the program containing the domain
+            target_uuid (str): UUID of the domain to remove
 
         Returns:
             Dict: Details of the removed domain
         """
         data = self._read_file()
 
-        if group_id in data["groups"]:
-            group = data["groups"][group_id]
-            if domain_id in group["domains"]:
-                removed_domain = group["domains"].pop(domain_id)  # Remove domain
+        if program_uuid in data["programs"]:
+            program = data["programs"][program_uuid]
+            if target_uuid in program["domains"]:
+                removed_domain = program["domains"].pop(target_uuid)  # Remove domain
                 
                 self._write_to_file(data)  # Save updated data
                 
                 return {
-                    "group_id": group_id,
-                    "removed_domain_id": domain_id,
+                    "program_uuid": program_uuid,
+                    "removed_target_uuid": target_uuid,
                     "removed_domain_name": removed_domain.get("domain_name", "Unknown"),
                     "message": "Domain removed successfully"
                 }
 
-        logger.error(f"No domain found with ID {domain_id} in group {group_id}")
-        raise GroupManagementError(f"No domain found with ID {domain_id} in group {group_id}")
+        logger.error(f"No domain found with ID {target_uuid} in program {program_uuid}")
+        raise ProgramManagementError(f"No domain found with ID {target_uuid} in program {program_uuid}")
 
-    def remove_group_by_id(self, group_id: str) -> Dict[str, Any]:
+    def remove_program_by_id(self, program_uuid: str) -> Dict[str, Any]:
         """
-        Remove a group and all its associated domains and commands based on Group ID.
+        Remove a program and all its associated domains and commands based on Program ID.
 
         Args:
-            group_id (str): UUID of the group to remove
+            program_uuid (str): UUID of the program to remove
 
         Returns:
-            Dict: Details of the removed group
+            Dict: Details of the removed program
         """
         data = self._read_file()
 
-        if group_id in data["groups"]:
-            removed_group = data["groups"].pop(group_id)  # Remove group
+        if program_uuid in data["programs"]:
+            removed_program = data["programs"].pop(program_uuid)  # Remove program
             
             self._write_to_file(data)  # Save updated data
             
             return {
-                "removed_group_id": group_id,
-                "removed_group_name": removed_group.get("group_name", "Unknown"),
-                "message": "Group removed successfully"
+                "removed_program_uuid": program_uuid,
+                "removed_program_name": removed_program.get("program_name", "Unknown"),
+                "message": "Program removed successfully"
             }
 
-        logger.error(f"No group found with ID {group_id}")
-        raise GroupManagementError(f"No group found with ID {group_id}")
+        logger.error(f"No program found with ID {program_uuid}")
+        raise ProgramManagementError(f"No program found with ID {program_uuid}")
 
 
     def find_command_by_pid(self, pid: int) -> Dict[str, Any]:
@@ -533,56 +530,56 @@ class GroupManager:
             pid (int): Process ID to search for
         
         Returns:
-            Dict: Command details including group and domain information
+            Dict: Command details including program and domain information
         """
         data = self._read_file()
         
-        for group_uuid, group in data['groups'].items():
-            for domain_uuid, domain in group['domains'].items():
+        for program_uuid, program in data['programs'].items():
+            for target_uuid, domain in program['domains'].items():
                 for command_name, command_details in domain['commands'].items():
                     if command_details.get('pid') == pid:
                         return {
-                            'group_uuid': group_uuid,
-                            'domain_uuid': domain_uuid,
+                            'program_uuid': program_uuid,
+                            'target_uuid': target_uuid,
                             'command_name': command_name,
                             'command_details': command_details
                         }
         logger.error(f"No command found with PID {pid}")
-        raise GroupManagementError(f"No command found with PID {pid}")
+        raise ProgramManagementError(f"No command found with PID {pid}")
 
-    def get_group_by_name(self, group_name: str) -> Optional[Dict[str, Any]]:
+    def get_program_by_name(self, program_name: str) -> Optional[Dict[str, Any]]:
         """
-        Retrieve a group by its name.
+        Retrieve a program by its name.
         
         Args:
-            group_name (str): Name of the group
+            program_name (str): Name of the program
         
         Returns:
-            Optional[Dict]: Group details including its UUID
+            Optional[Dict]: Program details including its UUID
         """
         data = self._read_file()
-        for uuid, group in data['groups'].items():
-            if group['group_name'] == group_name:
-                return {"uuid": uuid, **group}
+        for uuid, program in data['programs'].items():
+            if program['program_name'] == program_name:
+                return {"uuid": uuid, **program}
         
         return None
 
-    def get_group_uuid_by_name(self, group_name: str) -> Optional[str]:
+    def get_program_uuidby_name(self, program_name: str) -> Optional[str]:
         """
-        Get group UUID by its name.
+        Get program UUID by its name.
         
         Args:
-            group_name (str): Name of the group
+            program_name (str): Name of the program
         
         Returns:
-            Optional[str]: UUID of the group if found, None otherwise
+            Optional[str]: UUID of the program if found, None otherwise
         """
-        group = self.get_group_by_name(group_name)
-        return group['uuid'] if group else None
+        program = self.get_program_by_name(program_name)
+        return program['uuid'] if program else None
 
-    def debug_print_groups(self):
-        """Debug method to print all current groups."""
+    def debug_print_programs(self):
+        """Debug method to print all current programs."""
         data = self._read_file()
-        logger.debug("Current Groups: ")
-        for uuid, group in data['groups'].items():
-            logger.debug(f"UUID: {uuid}, Name: {group['group_name']}")
+        logger.debug("Current programs: ")
+        for uuid, program in data['programs'].items():
+            logger.debug(f"UUID: {uuid}, Name: {program['program_name']}")

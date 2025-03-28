@@ -36,7 +36,7 @@ class EndpointInsertOperations:
         """Record a change in endpoint response"""
         try:
             params = (
-                endpoint_data['program_id'],
+                endpoint_data['program_uuid'],
                 endpoint_data['target_id'],
                 endpoint_data['scan_name'],
                 endpoint_data['status'],
@@ -135,7 +135,7 @@ class EndpointQueryOperations:
                 row = result[0]
                 return {
                     'id': row[0],
-                    'program_id': row[1],
+                    'program_uuid': row[1],
                     'target_id': row[2],
                     'scan_name': row[3],
                     'url': row[4],
@@ -163,7 +163,7 @@ class EndpointQueryOperations:
                 row = result[0]
                 return {
                     'id': row[0],
-                    'program_id': row[1],
+                    'program_uuid': row[1],
                     'target_id': row[2],
                     'scan_name': row[3],
                     'url': row[4],
@@ -207,16 +207,16 @@ class EndpointQueryOperations:
         except Exception as e:
             logger.exception(f"Failed to get scan names: {str(e)}")
             raise
-    def get_target_and_program_id(self, target_domain) -> List[Dict]:
+    def get_target_and_program_uuid(self, target_domain) -> List[Dict]:
         """Get target and program id for the endpoint"""
         try:
-            result = self.db.execute_query(QueryManager.GET_TARGET_AND_PROGRAM_ID, (target_domain,))
+            result = self.db.execute_query(QueryManager.GET_TARGET_AND_program_uuid, (target_domain,))
             if result != []:
                 return result[0]
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get target_id and program_id for endpoint: {str(e)}")
+            logger.exception(f"Failed to get target_id and program_uuid for endpoint: {str(e)}")
             raise
     def get_need_review_endpoints(self) -> List[Dict]:
         """Get all endpoints that are left to review"""
@@ -257,18 +257,18 @@ class EndpointQueryOperations:
         except Exception as e:
             logger.exception(f"Failed to get endpoints data with Status [{status}]: {str(e)}")
             raise
-    def get_program_name(self, program_id) -> List[Dict]:
+    def get_program_name(self, program_uuid) -> List[Dict]:
         """Get program name from program id
             Returns: [('Google',)]
             To get exact name use: result[0][0]
         """
         try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_id,))
+            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_uuid,))
             if result != []:
                 return result
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get program name for [{program_id}]: {str(e)}")
+            logger.exception(f"Failed to get program name for [{program_uuid}]: {str(e)}")
             raise
 

@@ -42,7 +42,7 @@ class EndpointInsertOperations:
         """Record a change in endpoint response"""
         try:
             params = (
-                endpoint_data['program_id'],
+                endpoint_data['program_uuid'],
                 endpoint_data['target_id'],
                 endpoint_data['scan_name'],
                 endpoint_data['scan_interval'],
@@ -85,7 +85,7 @@ class EndpointInsertOperations:
     def insert_web_target(self, web_target_data: Dict):
         try:
             params = (
-                web_target_data['program_id'],
+                web_target_data['program_uuid'],
                 web_target_data['target_domain'],
                 web_target_data['technology'],
                 web_target_data['status_code'],
@@ -104,26 +104,26 @@ class EndpointInsertOperations:
             logger.exception(f"Failed to insert web target data {str(web_target_data['target_domain'])} : {str(e)}")
             raise
 
-    def insert_web_target_new(self, program_id, target_name):
+    def insert_web_target_new(self, program_uuid, target_name):
         """
         Insert web target
         Returns id
         Example: 10499b38-3036-4d21-b693-3f1e74dea425
         """
         try:
-            target_id = self.db.execute_query(QueryManager.INSERT_WEB_TARGET_NEW, (program_id, target_name))
+            target_id = self.db.execute_query(QueryManager.INSERT_WEB_TARGET_NEW, (program_uuid, target_name))
             logger.info(f"Web Target inserted successfully - [{target_name}]")
             return target_id[0]
             
         except Exception as e:
-            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_id}]: {str(e)}")
+            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_uuid}]: {str(e)}")
             raise
 
 
     def insert_mobile_target(self, mobile_target_data: Dict):
         try:
             params = (
-                mobile_target_data['program_id'],
+                mobile_target_data['program_uuid'],
                 mobile_target_data['target_package'],
                 mobile_target_data['target_apk'],
                 extensions.adapt(mobile_target_data['technology']),
@@ -174,7 +174,7 @@ class EndpointUpdateOperations:
     def update_web_target(self, web_target_data: Dict):
         try:
             params = (
-                web_target_data['program_id'],
+                web_target_data['program_uuid'],
                 web_target_data['target_domain'],
                 web_target_data['technology'],
                 web_target_data['status_code'],
@@ -292,11 +292,11 @@ class EndpointQueryOperations:
             raise
     
     # --- Report ---
-    def get_program_details(self, program_id=None, program_name=None) -> List[Dict]:
-        """Returns program details from program_id or program_name"""
+    def get_program_details(self, program_uuid=None, program_name=None) -> List[Dict]:
+        """Returns program details from program_uuid or program_name"""
         try:
-            if program_id is not None: 
-                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_id,))
+            if program_uuid is not None: 
+                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_uuid,))
                 return results
             
             elif program_name is not None: 
@@ -366,27 +366,27 @@ class EndpointQueryOperations:
             logger.exception(f"Failed to all web targets: {str(e)}")
             raise
         
-    def get_program_name(self, program_id) -> List[Dict]:
+    def get_program_name(self, program_uuid) -> List[Dict]:
         """Get program name from program id
         """
         try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_id,))
+            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_uuid,))
             if result != []:
                 return result
             else:
                 return None
         except Exception as e:
-            logger.exception(f"Failed to get program name for [{program_id}]: {str(e)}")
+            logger.exception(f"Failed to get program name for [{program_uuid}]: {str(e)}")
             raise
 
-    def get_program_id(self, program_name) -> List[Dict]:
+    def get_program_uuid(self, program_name) -> List[Dict]:
         """
         Get program name from program id
-        Returns program_id
+        Returns program_uuid
         Example: 1fd2a300-8646-455a-9d0b-c090deae67d4
         """
         try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_ID, (program_name,))
+            result = self.db.execute_query(QueryManager.GET_program_uuid, (program_name,))
             if result != []:
                 return result[0][0]
             else:
@@ -423,13 +423,13 @@ class EndpointQueryOperations:
             raise
 
 
-    def get_specifc_web_targets_count(self, program_id) -> List[Dict]:
+    def get_specifc_web_targets_count(self, program_uuid) -> List[Dict]:
         """ Get total web targets count of specifc program
             Returns: count of web targets
             Example: 203
         """
         try:
-            result = self.db.execute_query(QueryManager.GET_SPECIFIC_WEB_TARGETS_COUNT, (program_id,))
+            result = self.db.execute_query(QueryManager.GET_SPECIFIC_WEB_TARGETS_COUNT, (program_uuid,))
             if result != []:
                 return result[0][0]
             else:

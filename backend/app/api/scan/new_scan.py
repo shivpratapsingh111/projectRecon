@@ -11,7 +11,7 @@ from app.db.db_manager import DatabaseManager
 db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)
 
-async def new_scan(domain, group_name, file, execution_style, scanOptions):
+async def new_scan(domain, program_name, file, execution_style, scanOptions):
     try:
         if scanOptions:
             scan_config = json.loads(scanOptions)
@@ -41,7 +41,7 @@ async def new_scan(domain, group_name, file, execution_style, scanOptions):
         file_content = (await file.read()).decode("utf-8")
         domain_list += [line.strip() for line in file_content.splitlines() if line.strip()]
 
-    if not domain_list or not group_name or not execution_style or not scanOptions:
+    if not domain_list or not program_name or not execution_style or not scanOptions:
         logger.error("Necessary details not provided")
         return JSONResponse(
             content={"error": "Necessary details not provided"},
@@ -66,12 +66,12 @@ async def new_scan(domain, group_name, file, execution_style, scanOptions):
     #                 content={"error": f"{domain} already exists in DB"},
     #                 status_code=400,
     #             )
-    logger.debug(f"Scan_Name: {group_name}, \nDomains{domain_list}, \n Scan_Oprtions{scan_config}")
+    logger.debug(f"Scan_Name: {program_name}, \nDomains{domain_list}, \n Scan_Oprtions{scan_config}")
 
-    asyncio.create_task(asyncio.to_thread(start_scan, group_name, domain_list, execution_style, scan_config))
+    asyncio.create_task(asyncio.to_thread(start_scan, program_name, domain_list, execution_style, scan_config))
 
     return {
-        "Group Name": group_name,
+        "Program Name": program_name,
         "Domains": domain_list,
         "Scan Config": scan_config,
     }

@@ -19,7 +19,7 @@ def get_review_endpoints():
     if data is not None:
         for row in data:
             result.append({
-                'program_id': row[0],
+                'program_uuid': row[0],
                 'target_id': row[1],
                 'scan_name': row[2],
                 'url': row[3],

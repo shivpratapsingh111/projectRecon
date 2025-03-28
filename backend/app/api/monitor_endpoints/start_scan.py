@@ -65,7 +65,7 @@ def get_endpoints_by_status(status):
             for row in data:
                 entry = {
                     'id': row[0],
-                    'program_id': row[1],
+                    'program_uuid': row[1],
                     'program_name': None,
                     'scan_name': row[2],
                     'scan_interval': row[3],
@@ -92,7 +92,7 @@ def get_endpoints_by_status(status):
         logger.exception(f"Error fetching endpoints by status: {e}")
         return None
 
-def group_urls_by_scan_name(endpoints):
+def groupby_urls_by_scan_name(endpoints):
     grouped = defaultdict(list)
 
     for endpoint in endpoints:
@@ -115,7 +115,7 @@ async def schedule_scans():
     active_endpoints = get_endpoints_by_status("active")
     logger.debug(f"Got {len(active_endpoints)} active endpoints.")
     if active_endpoints:
-        grouped_endpoints = group_urls_by_scan_name(active_endpoints)
+        grouped_endpoints = groupby_urls_by_scan_name(active_endpoints)
 
         for scan_name, urls in grouped_endpoints.items():
             result = await start_scan_for_group(scan_name, urls)

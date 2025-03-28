@@ -53,7 +53,7 @@ class EndpointInsertOperations:
         """Record a change in endpoint response"""
         try:
             params = (
-                endpoint_data['program_id'],
+                endpoint_data['program_uuid'],
                 endpoint_data['target_id'],
                 endpoint_data['scan_name'],
                 endpoint_data['scan_interval'],
@@ -96,7 +96,7 @@ class EndpointInsertOperations:
     def insert_web_target(self, web_target_data: Dict):
         try:
             params = (
-                web_target_data['program_id'],
+                web_target_data['program_uuid'],
                 web_target_data['target_domain'],
                 web_target_data['technology'],
                 web_target_data['status_code'],
@@ -117,7 +117,7 @@ class EndpointInsertOperations:
     def insert_mobile_target(self, mobile_target_data: Dict):
         try:
             params = (
-                mobile_target_data['program_id'],
+                mobile_target_data['program_uuid'],
                 mobile_target_data['target_package'],
                 mobile_target_data['target_apk'],
                 extensions.adapt(mobile_target_data['technology']),
@@ -259,11 +259,11 @@ class EndpointQueryOperations:
             raise
     
     # --- Report ---
-    def get_program_details(self, program_id=None, program_name=None) -> List[Dict]:
-        """Returns program details from program_id or program_name"""
+    def get_program_details(self, program_uuid=None, program_name=None) -> List[Dict]:
+        """Returns program details from program_uuid or program_name"""
         try:
-            if program_id is not None: 
-                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_id,))
+            if program_uuid is not None: 
+                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_uuid,))
                 return results
             
             elif program_name is not None: 
@@ -322,15 +322,15 @@ class EndpointQueryOperations:
         except Exception as e:
             self.logger.error(f"Failed to get mobile target data: {str(e)}")
             raise
-    def get_program_name(self, program_id) -> List[Dict]:
+    def get_program_name(self, program_uuid) -> List[Dict]:
         """Get program name from program id
         """
         try:
-            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_id,))
+            result = self.db.execute_query(QueryManager.GET_PROGRAM_NAME, (program_uuid,))
             if result != []:
                 return result
             else:
                 return None
         except Exception as e:
-            self.logger.error(f"Failed to get program name for [{program_id}]: {str(e)}")
+            self.logger.error(f"Failed to get program name for [{program_uuid}]: {str(e)}")
             raise

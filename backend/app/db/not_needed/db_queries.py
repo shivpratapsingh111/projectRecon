@@ -37,7 +37,7 @@ class QueryManager:
     CREATE_WEB_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS web_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_domain TEXT UNIQUE NOT NULL,
             technology TEXT[],
             status_code INTEGER,
@@ -54,7 +54,7 @@ class QueryManager:
     CREATE_MOBILE_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS mobile_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_package TEXT UNIQUE NOT NULL,
             target_apk TEXT NOT NULL,
             technology TEXT[],
@@ -86,11 +86,11 @@ class QueryManager:
         VALUES (%s, %s,%s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_WEB_TARGET = """
-        INSERT INTO web_targets (program_id, target_domain, technology, status_code, port, host, ipv4, ipv6, response_time, webserver, vulnerability_reported, created_at)
+        INSERT INTO web_targets (program_uuid, target_domain, technology, status_code, port, host, ipv4, ipv6, response_time, webserver, vulnerability_reported, created_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_MOBILE_TARGET = """
-        INSERT INTO mobile_targets (program_id, target_package, target_apk, technology, download_url, vulnerability_reported, created_at)
+        INSERT INTO mobile_targets (program_uuid, target_package, target_apk, technology, download_url, vulnerability_reported, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_WEB_REPORT = """

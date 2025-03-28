@@ -59,7 +59,7 @@ async def api_get_existing_programnames():
 @router.post("/process-scan")
 async def process_scan(
     domain: Union[str, None] = Form(None),
-    groupName: Union[str, None] = Form(None),
+    programName: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
     execution_style: Union[str, None] = Form("sequential"),
     scanOptions: Union[str, None] = Form(None),
@@ -70,7 +70,7 @@ async def process_scan(
     - `file`: A file containing one domain per line.
     - `scanOptions`: A JSON string containing selected scan options.
     """
-    return await new_scan(domain, groupName, file, execution_style, scanOptions)
+    return await new_scan(domain, programName, file, execution_style, scanOptions)
     
 @router.post("/stop/command/{process_id}")
 async def stop_command_processes(process_id: str):
@@ -80,18 +80,18 @@ async def stop_command_processes(process_id: str):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     
-@router.post("/stop/domain/{group_id}/{domain_id}")
-async def stop_domain_processes(group_id: str, domain_id: str):
+@router.post("/stop/domain/{program_uuid}/{target_uuid}")
+async def stop_domain_processes(program_uuid: str, target_uuid: str):
     try:
-        result = manager.kill_domain_processes(group_id, domain_id)
-        return {f"status of domain {domain_id} of group {group_id}": result}
+        result = manager.kill_domain_processes(program_uuid, target_uuid)
+        return {f"status of domain {target_uuid} of program {program_uuid}": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@router.post("/stop/group/{group_name}")
-async def stop_group_processes(group_name: str):
+@router.post("/stop/program/{program_name}")
+async def stop_program_processes(program_name: str):
     try:
-        result = manager.kill_group_processes(group_name)
-        return {f"status of {group_name}": result}
+        result = manager.kill_program_processes(program_name)
+        return {f"status of {program_name}": result}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -151,7 +151,7 @@ class EndpointMonitor:
     async def get_program_and_target_id(self, url):
             logger.info(f"Getting Program and Target Id for {url}")
             target_domain = urlparse(url).hostname.lower()
-            ids = self.db_ops.query_operations().get_target_and_program_id(target_domain)
+            ids = self.db_ops.query_operations().get_target_and_program_uuid(target_domain)
             return ids
 
 
@@ -160,7 +160,7 @@ class EndpointMonitor:
             
             if content == "Nil":
                 current_data = {
-                    'program_id': None,
+                    'program_uuid': None,
                     'target_id': None,
                     'scan_name': scan_name,
                     'status': 'active',
@@ -196,7 +196,7 @@ class EndpointMonitor:
                 logger.info(f"Response Size for [{url}] [{response_size} bytes]")
 
                 current_data = {
-                    'program_id': None,
+                    'program_uuid': None,
                     'target_id': None,
                     'scan_name': scan_name,
                     'status': 'active',
@@ -216,7 +216,7 @@ class EndpointMonitor:
             # Update program and target IDs if available
             ids = await self.get_program_and_target_id(url)
             if ids:
-                current_data['target_id'], current_data['program_id'] = ids
+                current_data['target_id'], current_data['program_uuid'] = ids
                 logger.info(f"Endpoint found on DB [{url}]")
 
             previous_data = self.db_ops.query_operations().get_endpoint_data_by_url(url)

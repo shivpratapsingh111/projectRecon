@@ -19,7 +19,7 @@ class QueryManager:
     CREATE_WEB_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS web_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_domain TEXT UNIQUE NOT NULL,
             technology TEXT[],
             status_code INTEGER,
@@ -36,7 +36,7 @@ class QueryManager:
     CREATE_MOBILE_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS mobile_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_package TEXT UNIQUE NOT NULL,
             target_apk TEXT NOT NULL,
             technology TEXT[],
@@ -50,7 +50,7 @@ class QueryManager:
     CREATE_ENDPOINTS_TABLE = """
         CREATE TABLE IF NOT EXISTS monitor_endpoints (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_id UUID REFERENCES web_targets(id) ON DELETE CASCADE,
             scan_name TEXT,
             scan_interval INTEGER DEFAULT 4,
@@ -78,7 +78,7 @@ class QueryManager:
     # --- Endpoint Monitor ---
     INSERT_ENDPOINT = """
         INSERT INTO monitor_endpoints (
-            program_id, target_id, scan_name, scan_interval, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
+            program_uuid, target_id, scan_name, scan_interval, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
     """
@@ -89,18 +89,18 @@ class QueryManager:
         VALUES (%s, %s,%s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_WEB_TARGET = """
-        INSERT INTO web_targets (program_id, target_domain, technology, status_code, port, host, ipv4, ipv6, response_time, webserver, vulnerability_reported, created_at)
+        INSERT INTO web_targets (program_uuid, target_domain, technology, status_code, port, host, ipv4, ipv6, response_time, webserver, vulnerability_reported, created_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_WEB_TARGET_NEW = """
-        INSERT INTO web_targets (program_id, target_domain) 
+        INSERT INTO web_targets (program_uuid, target_domain) 
         VALUES (%s, %s) 
         ON CONFLICT (target_domain) 
-        DO UPDATE SET program_id = EXCLUDED.program_id 
+        DO UPDATE SET program_uuid = EXCLUDED.program_uuid 
         RETURNING id;
     """
     INSERT_MOBILE_TARGET = """
-        INSERT INTO mobile_targets (program_id, target_package, target_apk, technology, download_url, vulnerability_reported, created_at)
+        INSERT INTO mobile_targets (program_uuid, target_package, target_apk, technology, download_url, vulnerability_reported, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP) RETURNING id
     """
     INSERT_WEB_REPORT = """
@@ -118,22 +118,22 @@ class QueryManager:
 
     # --- Endpoint Monitor ---
     SELECT_ENDPOINT_DATA_BY_URL = """
-        SELECT id, program_id, target_id, scan_name, url, old_status_code, new_status_code,
+        SELECT id, program_uuid, target_id, scan_name, url, old_status_code, new_status_code,
             old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
         FROM monitor_endpoints WHERE url = %s
     """
     SELECT_ENDPOINT_DATA_BY_ID = """
-        SELECT id, program_id, target_id, scan_name, url, old_status_code, new_status_code,
+        SELECT id, program_uuid, target_id, scan_name, url, old_status_code, new_status_code,
             old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
         FROM monitor_endpoints WHERE id = %s
     """
     SELECT_ALL_ENDPOINTS = """
-        SELECT id, program_id, scan_name, url FROM monitor_endpoints
+        SELECT id, program_uuid, scan_name, url FROM monitor_endpoints
     """
     GET_NEED_REVIEW_ENDPOINTS = """
         SELECT
             id,
-            program_id,
+            program_uuid,
             target_id, 
             scan_name, 
             url,
@@ -154,17 +154,17 @@ class QueryManager:
         FROM monitor_endpoints 
         WHERE id = %s
     """
-    GET_TARGET_AND_PROGRAM_ID = """
+    GET_TARGET_AND_program_uuid = """
         SELECT
             id,
-            program_id
+            program_uuid
         FROM web_targets 
         WHERE target_domain = %s
     """
     GET_ENDPOINTS_DATA_BY_STATUS = """
         SELECT
             id,
-            program_id,
+            program_uuid,
             scan_name,
             scan_interval,
             status,
@@ -182,7 +182,7 @@ class QueryManager:
         FROM programs
         WHERE id = %s
     """
-    GET_PROGRAM_ID = """
+    GET_program_uuid = """
         SELECT 
             id
         FROM programs
@@ -203,7 +203,7 @@ class QueryManager:
         SELECT COUNT(*) FROM web_targets;
     """
     GET_SPECIFIC_WEB_TARGETS_COUNT = """
-        SELECT COUNT(*) FROM web_targets WHERE program_id = %s;
+        SELECT COUNT(*) FROM web_targets WHERE program_uuid = %s;
     """
     GET_ENDPOINTS_COUNT = """
         SELECT 

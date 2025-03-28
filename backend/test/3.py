@@ -1,30 +1,30 @@
 import json  
-from app.interface.json_data_manager import GroupManager
-group_manager = GroupManager()
+from app.interface.json_data_manager import ProgramManager
+program_manager = ProgramManager()
 
-def remove_domain_by_id(group_id: str, domain_id: str):
+def remove_domain_by_id(program_uuid: str, target_uuid: str):
     """
-    Remove a domain and all its associated commands from a group.
+    Remove a domain and all its associated commands from a program.
 
     Args:
-        group_id (str): UUID of the group containing the domain
-        domain_id (str): UUID of the domain to remove
+        program_uuid (str): UUID of the program containing the domain
+        target_uuid (str): UUID of the domain to remove
 
     Returns:
         Dict: Details of the removed domain
     """
-    data = group_manager._read_file()
+    data = program_manager._read_file()
 
-    if group_id in data["groups"]:
-        group = data["groups"][group_id]
-        if domain_id in group["domains"]:
-            removed_domain = group["domains"].pop(domain_id)  # Remove domain
+    if program_uuid in data["programs"]:
+        program = data["programs"][program_uuid]
+        if target_uuid in program["domains"]:
+            removed_domain = program["domains"].pop(target_uuid)  # Remove domain
             
-            group_manager._write_to_file(data)  # Save updated data
+            program_manager._write_to_file(data)  # Save updated data
             
             return {
-                "group_id": group_id,
-                "removed_domain_id": domain_id,
+                "program_uuid": program_uuid,
+                "removed_target_uuid": target_uuid,
                 "removed_domain_name": removed_domain.get("domain_name", "Unknown"),
                 "message": "Domain removed successfully"
             }
@@ -33,5 +33,5 @@ def remove_domain_by_id(group_id: str, domain_id: str):
 
     
     
-# update_group_status_by_id("4d2cb9e2-f2fd-4968-8398-30293f87d5a0", "running")
+# update_program_status_by_id("4d2cb9e2-f2fd-4968-8398-30293f87d5a0", "running")
 remove_domain_by_id("4d2cb9e2-f2fd-4968-8398-30293f87d5a0", "8b81b181-a243-48a8-a36e-34b00319609f")

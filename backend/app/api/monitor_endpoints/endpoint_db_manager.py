@@ -25,7 +25,7 @@ def get_review_endpoints():
         for row in data:
             result.append({
                 'id': row[0],
-                'program_id': row[1],
+                'program_uuid': row[1],
                 'target_id': row[2],
                 'scan_name': row[3],
                 'url': row[4],
@@ -108,7 +108,7 @@ def get_endpoints_by_status(status):
             for row in data:
                 entry = {
                     'id': row[0],
-                    'program_id': row[1],
+                    'program_uuid': row[1],
                     'program_name': None,
                     'scan_name': row[2],
                     'scan_interval': row[3],
@@ -188,7 +188,7 @@ async def get_existing_scans():
 async def add_new_endpoints(scan_name, endpoint, file, scan_options):
     
     current_data = {
-        'program_id': None,
+        'program_uuid': None,
         'target_id': None,
         'scan_name': scan_name,
         'status': 'active',
@@ -229,16 +229,16 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
                 current_data['url'] = endpoint
                 try:
                     domain_name = get_domain_from_url(endpoint)
-                    ids = db_ops.query_operations().get_target_and_program_id(domain_name)
+                    ids = db_ops.query_operations().get_target_and_program_uuid(domain_name)
                     if ids is not None:
-                        target_id, program_id = ids
+                        target_id, program_uuid = ids
                     else: 
                         target_id = None
-                        program_id = None 
+                        program_uuid = None 
                         
-                    if program_id is not None:
+                    if program_uuid is not None:
                         logger.info(f"Program Id found for target_domain {domain_name}")
-                        current_data['program_id'] = program_id
+                        current_data['program_uuid'] = program_uuid
                     else:
                         logger.warning(f"Program Id not found for target_domain {domain_name}. Continuing with null value")
                         
@@ -273,16 +273,16 @@ async def add_new_endpoints(scan_name, endpoint, file, scan_options):
                     current_data['url'] = endpoint
                     try:
                         domain_name = get_domain_from_url(endpoint)
-                        ids = db_ops.query_operations().get_target_and_program_id(domain_name)
+                        ids = db_ops.query_operations().get_target_and_program_uuid(domain_name)
                         if ids is not None:
-                            target_id, program_id = ids
+                            target_id, program_uuid = ids
                         else: 
                             target_id = None
-                            program_id = None 
+                            program_uuid = None 
                             
-                        if program_id is not None:
+                        if program_uuid is not None:
                             logger.info(f"Program Id found for target_domain {domain_name}")
-                            current_data['program_id'] = program_id
+                            current_data['program_uuid'] = program_uuid
                         else:
                             logger.warning(f"Program Id not found for target_domain {domain_name}. Continuing with null value")
                             

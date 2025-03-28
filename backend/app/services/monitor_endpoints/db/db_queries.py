@@ -8,7 +8,7 @@ class QueryManager:
     CREATE_ENDPOINTS_TABLE = """
         CREATE TABLE IF NOT EXISTS monitor_endpoints (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_id UUID REFERENCES web_targets(id) ON DELETE CASCADE,
             scan_name TEXT,
             scan_interval INTEGER DEFAULT 4,
@@ -36,7 +36,7 @@ class QueryManager:
     # --- Endpoint Monitor ---
     INSERT_ENDPOINT = """
         INSERT INTO monitor_endpoints (
-            program_id, target_id, scan_name, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
+            program_uuid, target_id, scan_name, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
     """
@@ -47,17 +47,17 @@ class QueryManager:
 
     # --- Endpoint Monitor ---
     SELECT_ENDPOINT_DATA_BY_URL = """
-        SELECT id, program_id, target_id, scan_name, url, old_status_code, new_status_code,
+        SELECT id, program_uuid, target_id, scan_name, url, old_status_code, new_status_code,
             old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
         FROM monitor_endpoints WHERE url = %s
     """
     SELECT_ENDPOINT_DATA_BY_ID = """
-        SELECT id, program_id, target_id, scan_name, url, old_status_code, new_status_code,
+        SELECT id, program_uuid, target_id, scan_name, url, old_status_code, new_status_code,
             old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
         FROM monitor_endpoints WHERE id = %s
     """
     SELECT_ALL_ENDPOINTS = """
-        SELECT id, program_id, scan_name, url FROM monitor_endpoints
+        SELECT id, program_uuid, scan_name, url FROM monitor_endpoints
     """
     SELECT_ALL_PROGRAMS = """
         SELECT * FROM programs
@@ -68,7 +68,7 @@ class QueryManager:
     GET_NEED_REVIEW_ENDPOINTS = """
         SELECT
             id,
-            program_id,
+            program_uuid,
             target_id, 
             scan_name, 
             url,
@@ -89,17 +89,17 @@ class QueryManager:
         FROM monitor_endpoints 
         WHERE id = %s
     """
-    GET_TARGET_AND_PROGRAM_ID = """
+    GET_TARGET_AND_program_uuid = """
         SELECT
             id,
-            program_id
+            program_uuid
         FROM web_targets 
         WHERE target_domain = %s
     """
     GET_ENDPOINTS_DATA_BY_STATUS = """
         SELECT
             id,
-            program_id,
+            program_uuid,
             scan_name,
             scan_interval,
             status,

@@ -36,7 +36,7 @@ class EndpointInsertOperations:
         """Record a change in endpoint response"""
         try:
             params = (
-                endpoint_data['program_id'],
+                endpoint_data['program_uuid'],
                 endpoint_data['target_id'],
                 endpoint_data['scan_name'],
                 endpoint_data['status'],
@@ -60,14 +60,14 @@ class EndpointInsertOperations:
             raise
 
 
-    def insert_web_target(self, program_id, target_name):
+    def insert_web_target(self, program_uuid, target_name):
         """Insert web target"""
         try:
-            self.db.execute_query(QueryManager.INSERT_WEB_TARGETS, (program_id, target_name))
+            self.db.execute_query(QueryManager.INSERT_WEB_TARGETS, (program_uuid, target_name))
             logger.info(f"Web Target inserted successfully - [{target_name}]")
             
         except Exception as e:
-            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_id}]: {str(e)}")
+            logger.exception(f"Failed to insert web target [{target_name}] in program [{program_uuid}]: {str(e)}")
             raise
 
 class EndpointUpdateOperations:

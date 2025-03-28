@@ -77,14 +77,14 @@ program_data1 = {
     'report_form': None
 }
 
-program_id = db_ops.insert_operations().insert_program(program_data)
-program_id1 = db_ops.insert_operations().insert_program(program_data1)
+program_uuid = db_ops.insert_operations().insert_program(program_data)
+program_uuid1 = db_ops.insert_operations().insert_program(program_data1)
 # result  = db_ops.query_operations().check_program_exists("Google")
 # print(result)
 
 
 web_target_data = {
-    'program_id': program_id,
+    'program_uuid': program_uuid,
     'target_domain': 'assets.ab-destinations.bolt.eu',
     'technology': [''],
     'status_code': 200,
@@ -97,7 +97,7 @@ web_target_data = {
     'vulnerability_reported': ['RCE', 'OAuth']
 }
 web_target_data1 = {
-    'program_id': program_id1,
+    'program_uuid': program_uuid1,
     'target_domain': 'cup.carry1st.com',
     'technology': [''],
     'status_code': 200,
@@ -118,7 +118,7 @@ target_id1 = db_ops.insert_operations().insert_web_target(web_target_data1)
 
 
 endpoint_data_g1 = {
-    'program_id': program_id,
+    'program_uuid': program_uuid,
     'target_id': target_id,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -139,7 +139,7 @@ endpoint_data_g1 = {
 }
 
 endpoint_data_g2 = {
-    'program_id': program_id,
+    'program_uuid': program_uuid,
     'target_id': target_id,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -160,7 +160,7 @@ endpoint_data_g2 = {
 }
 
 endpoint_data_g3 = {
-    'program_id': program_id,
+    'program_uuid': program_uuid,
     'target_id': target_id,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -182,7 +182,7 @@ endpoint_data_g3 = {
 
 
 endpoint_data_y1 = {
-    'program_id': program_id1,
+    'program_uuid': program_uuid1,
     'target_id': target_id1,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -202,7 +202,7 @@ endpoint_data_y1 = {
 
 }
 endpoint_data_y2 = {
-    'program_id': program_id1,
+    'program_uuid': program_uuid1,
     'target_id': target_id1,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -222,7 +222,7 @@ endpoint_data_y2 = {
 
 }
 endpoint_data_y3 = {
-    'program_id': program_id1,
+    'program_uuid': program_uuid1,
     'target_id': target_id1,
     'scan_name': 'Test-Scan',
     'scan_interval': 60,
@@ -253,7 +253,7 @@ endpoint_id1 = db_ops.insert_operations().insert_endpoint(endpoint_data_y3)
 # -------------------- Mobile Target ----------------------
 
 mobile_target_data = {
-    'program_id': program_id,
+    'program_uuid': program_uuid,
     'target_package': 'com.bolt.android',
     'target_apk': 'Bolt APK',
     'technology': [''],
@@ -262,7 +262,7 @@ mobile_target_data = {
 }
 
 mobile_target_data1 = {
-    'program_id': program_id1,
+    'program_uuid': program_uuid1,
     'target_package': 'com.carry1st.android',
     'target_apk': 'Carry1st APK',
     'technology': [],
@@ -282,7 +282,7 @@ mobile_target_id1 = db_ops.insert_operations().insert_mobile_target(mobile_targe
 # 
 # target_data =db_ops.query_operations().get_mobile_target_data(target_id='701a0ab9-03b9-433e-b56b-a4388b30b82c')
 # 
-# (target_id, program_id, target_package, target_apk, technology, download_url, vulnerability_reported, created_at) = target_data[0]
+# (target_id, program_uuid, target_package, target_apk, technology, download_url, vulnerability_reported, created_at) = target_data[0]
 # 
 # print(vulnerability_reported)
 

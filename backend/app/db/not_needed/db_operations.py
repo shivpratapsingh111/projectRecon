@@ -90,7 +90,7 @@ class EndpointInsertOperations:
     def insert_web_target(self, web_target_data: Dict):
         try:
             params = (
-                web_target_data['program_id'],
+                web_target_data['program_uuid'],
                 web_target_data['target_domain'],
                 web_target_data['technology'],
                 web_target_data['status_code'],
@@ -111,7 +111,7 @@ class EndpointInsertOperations:
     def insert_mobile_target(self, mobile_target_data: Dict):
         try:
             params = (
-                mobile_target_data['program_id'],
+                mobile_target_data['program_uuid'],
                 mobile_target_data['target_package'],
                 mobile_target_data['target_apk'],
                 extensions.adapt(mobile_target_data['technology']),
@@ -253,11 +253,11 @@ class EndpointQueryOperations:
             raise
     
     # --- Report ---
-    def get_program_details(self, program_id=None, program_name=None) -> List[Dict]:
-        """Returns program details from program_id or program_name"""
+    def get_program_details(self, program_uuid=None, program_name=None) -> List[Dict]:
+        """Returns program details from program_uuid or program_name"""
         try:
-            if program_id is not None: 
-                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_id,))
+            if program_uuid is not None: 
+                results = self.db.execute_query(QueryManager.GET_PROGRAM_DATA_BY_ID, (program_uuid,))
                 return results
             
             elif program_name is not None: 

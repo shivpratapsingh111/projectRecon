@@ -42,7 +42,7 @@ class DatabaseImporter:
         self.CREATE_WEB_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS web_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_domain TEXT NOT NULL,
             technology TEXT[],
             status_code INTEGER,
@@ -60,7 +60,7 @@ class DatabaseImporter:
         self.CREATE_MOBILE_TARGETS_TABLE = """
         CREATE TABLE IF NOT EXISTS mobile_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_package TEXT UNIQUE NOT NULL,
             target_apk TEXT NOT NULL,
             technology TEXT[],
@@ -73,7 +73,7 @@ class DatabaseImporter:
         self.CREATE_ENDPOINTS_TABLE = """
         CREATE TABLE IF NOT EXISTS monitor_endpoints (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+            program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
             target_id UUID REFERENCES web_targets(id) ON DELETE CASCADE,
             scan_name TEXT,
             scan_interval INTEGER DEFAULT 4,
@@ -207,33 +207,33 @@ class DatabaseImporter:
         return subdomain_details
     
 
-    def get_program_id(self, json_file_name, group_name):
+    def get_program_uuid(self, json_file_name, program_name):
         """
-        Takes a JSON file name and group name, and returns the program ID of the group.
+        Takes a JSON file name and program name, and returns the program ID of the program.
         """
         with open(json_file_name, 'r') as file:
             data = json.load(file)
-            groups = data.get("groups", {})
+            programs = data.get("programs", {})
 
-            for program_id, group_details in groups.items():
-                if group_details.get("group_name") == group_name:
-                    return program_id
+            for program_uuid, program_details in programs.items():
+                if program_details.get("program_name") == program_name:
+                    return program_uuid
         return None 
 
-    def get_domain_id(self, json_file_name, program_id, domain_name):
+    def get_target_uuid(self, json_file_name, program_uuid, domain_name):
         """
         Takes a JSON file name, program ID, and domain name, and returns the UUID of the specified domain.
         """
         with open(json_file_name, 'r') as file:
             data = json.load(file)
-            groups = data.get("groups", {})
+            programs = data.get("programs", {})
 
-            group_details = groups.get(program_id)
-            if group_details:
-                domains = group_details.get("domains", {})
-                for domain_id, domain_details in domains.items():
+            program_details = programs.get(program_uuid)
+            if program_details:
+                domains = program_details.get("domains", {})
+                for target_uuid, domain_details in domains.items():
                     if domain_details.get("domain_name") == domain_name:
-                        return domain_id
+                        return target_uuid
 
         return None 
 
@@ -258,15 +258,15 @@ class DatabaseImporter:
             
             # Get program name from directory name
             program_name = os.path.basename(directory_path)
-            program_id = self.get_program_id(json_file_name, program_name)
-            if program_id is None:
-                print(f"Error: program_id is not found in json data file provided for {program_name}")
+            program_uuid = self.get_program_uuid(json_file_name, program_name)
+            if program_uuid is None:
+                print(f"Error: program_uuid is not found in json data file provided for {program_name}")
                 exit()
 
             cur.execute("""
                 INSERT INTO programs (id, program_name) 
                 VALUES (%s, %s) 
-            """, (program_id, program_name,))
+            """, (program_uuid, program_name,))
             
             targets_file = os.path.join(directory_path, 'targets.txt')
             inserted_domains = set()
@@ -277,14 +277,14 @@ class DatabaseImporter:
                 
                 for target in targets:
                     if target not in inserted_domains:
-                        target_id = self.get_domain_id(json_file_name, program_id, target)
+                        target_id = self.get_target_uuid(json_file_name, program_uuid, target)
                         if target_id is None:
                             print(f"Error: ID not found for domain [{target}] in json data file.")
                             exit()
                         cur.execute("""
-                            INSERT INTO web_targets (id, program_id, target_domain) 
+                            INSERT INTO web_targets (id, program_uuid, target_domain) 
                             VALUES (%s, %s, %s)
-                        """, (target_id, program_id, target))
+                        """, (target_id, program_uuid, target))
                         inserted_domains.add(target)
                     
                     # Parse subdomain details for this specific target
@@ -304,7 +304,7 @@ class DatabaseImporter:
                             
                             cur.execute("""
                                 INSERT INTO web_targets (
-                                    program_id, 
+                                    program_uuid, 
                                     target_domain, 
                                     technology, 
                                     status_code, 
@@ -316,7 +316,7 @@ class DatabaseImporter:
                                     webserver
                                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """, (
-                                program_id, 
+                                program_uuid, 
                                 subdomain, 
                                 details.get('technology'), 
                                 details.get('status_code'), 

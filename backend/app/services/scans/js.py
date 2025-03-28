@@ -4,29 +4,29 @@ from app.interface.process_manager import run_commands
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
-group_results = {}
+program_results = {}
 
 # DO NOT REMOVE PARAMETER: `execution_style`
-def start_js_scan(group_name, domain_list, execution_style, nuclei_enum, program_id, domain_id_list):
+def start_js_scan(program_name, domain_list, execution_style, nuclei_enum, program_uuid, target_uuid_list):
     # Store results for each domain
-    group_results = {}
+    program_results = {}
     
-    # Execute commands for a group of domains
-    for domain, domain_id in zip(domain_list, domain_id_list):
-        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/js"
+    # Execute commands for a program of domains
+    for domain, target_uuid in zip(domain_list, target_uuid_list):
+        result_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain}/js"
         os.makedirs(result_dir, exist_ok=True)
         os.makedirs(f"{result_dir}/.logs", exist_ok=True)
         os.makedirs(f"{result_dir}/jsfiles", exist_ok=True)
         commands = [
             # (
             #     "getJS",
-            #     f"getJS -input {ROOT_DATA_DIR}/{group_name}/{domain}/subdomains/{subdomains_file} -output {result_dir}/{getJS_urls}",
+            #     f"getJS -input {ROOT_DATA_DIR}/{program_name}/{domain}/subdomains/{subdomains_file} -output {result_dir}/{getJS_urls}",
             #     f"{result_dir}/.logs/{getJS_urls.removesuffix('.txt')}_stdout",
             #     f"{result_dir}/.logs/{getJS_urls.removesuffix('.txt')}_stderr"
             # ),
             # (
             #     "Downloading JS files",
-            #     f"cp {ROOT_DATA_DIR}/{group_name}/{domain}/urls/{js_urls} {result_dir}/{js_urls} && cat {result_dir}/{js_urls} {result_dir}/{getJS_urls} | sort -u -o {result_dir}/{js_urls} && fetcher -f {result_dir}/{js_urls} -dir {result_dir}/jsfiles -t 10",
+            #     f"cp {ROOT_DATA_DIR}/{program_name}/{domain}/urls/{js_urls} {result_dir}/{js_urls} && cat {result_dir}/{js_urls} {result_dir}/{getJS_urls} | sort -u -o {result_dir}/{js_urls} && fetcher -f {result_dir}/{js_urls} -dir {result_dir}/jsfiles -t 10",
             #     f"{result_dir}/.logs/downloading_js_files_stdout",
             #     f"{result_dir}/.logs/downloading_js_files_stderr"
             # ),
@@ -57,13 +57,13 @@ def start_js_scan(group_name, domain_list, execution_style, nuclei_enum, program
             # ),
             (
                 "Nuclei",
-                f"nuclei -l {ROOT_DATA_DIR}/{group_name}/{domain}/js/{js_urls} -t ~/nuclei-templates/exposures/ -o {result_dir}/{nuclei_file} ; cat {result_dir}/{nuclei_file} >> {ROOT_DATA_DIR}/{group_name}/{domain}/nuclei/{nuclei_file}",
+                f"nuclei -l {ROOT_DATA_DIR}/{program_name}/{domain}/js/{js_urls} -t ~/nuclei-templates/exposures/ -o {result_dir}/{nuclei_file} ; cat {result_dir}/{nuclei_file} >> {ROOT_DATA_DIR}/{program_name}/{domain}/nuclei/{nuclei_file}",
                 f"{result_dir}/.logs/{nuclei_file.removesuffix('.txt')}_stdout",
                 f"{result_dir}/.logs/{nuclei_file.removesuffix('.txt')}_stderr"
             )
         ]
         
         # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="nuclei", execution_style="sequential")
+        program_results[domain] = run_commands(program_name, domain, commands, program_uuid, target_uuid, scan_dir="nuclei", execution_style="sequential")
  
     logger.info(f"JS scan completed")

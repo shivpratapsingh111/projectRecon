@@ -16,8 +16,8 @@ manager = CommandExecutor()
 async def get_log_file_content(pid, log_type):
     data = manager.get_all_data()
     
-    for group in data.get("groups", {}).values():
-        for domain in group.get("domains", {}).values():
+    for program in data.get("programs", {}).values():
+        for domain in program.get("domains", {}).values():
             for command in domain.get("commands", {}).values():
                 if command.get("pid") == pid:
                     log_path = command.get(log_type)
@@ -60,29 +60,29 @@ async def read_file(file_path: Path, limit: Optional[int] = None, offset: int = 
         raise HTTPException(status_code=500, detail="Error reading file")
 
 
-async def get_domain_and_group(data: dict, domain_id: str):
-    for group_id, group_info in data.get("groups", {}).items():
-        domains = group_info.get("domains", {})
-        if domain_id in domains:
-            domain_name = domains[domain_id].get("domain_name")
-            group_name = group_info.get("group_name")
-            return domain_name, group_name
-    logger.warning(f"Domain ID {domain_id} not found")
+async def get_domain_and_program(data: dict, target_uuid: str):
+    for program_uuid, program_info in data.get("programs", {}).items():
+        domains = program_info.get("domains", {})
+        if target_uuid in domains:
+            domain_name = domains[target_uuid].get("domain_name")
+            program_name = program_info.get("program_name")
+            return domain_name, program_name
+    logger.warning(f"Domain ID {target_uuid} not found")
     return None, None
 
-async def get_file_paths(domain_id, scan_type):
+async def get_file_paths(target_uuid, scan_type):
     data = manager.get_all_data()
     if not data:
         return []
 
-    domain_name, group_name = await get_domain_and_group(data, domain_id)
+    domain_name, program_name = await get_domain_and_program(data, target_uuid)
 
     if scan_type == "subdomains":
         names = ["subdominator.txt", "bbot/subdomains.txt", "subfinder.txt", "yass.txt", "cero.txt", "sublist3r.txt", "githubsubdomains.txt", "gitlabsubdomains.txt"]
-        base_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/subdomains/.tmp"
+        base_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/subdomains/.tmp"
     elif scan_type == "urls":
         names = ["gau.txt", "waybackurls.txt", "waymore.txt", "katana.txt", "hakrawler.txt"]
-        base_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/urls/.tmp"
+        base_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/urls/.tmp"
 
     file_paths = []
     for name in names:
@@ -91,12 +91,12 @@ async def get_file_paths(domain_id, scan_type):
     return file_paths
 
         
-async def websocket_fetch_results(domain_id, scan_type):
+async def websocket_fetch_results(target_uuid, scan_type):
     
-    file_paths = await get_file_paths(domain_id, scan_type)
+    file_paths = await get_file_paths(target_uuid, scan_type)
     
     if not file_paths:
-        logger.error(f"No file paths found for domain {domain_id} and scan_type {scan_type}")
+        logger.error(f"No file paths found for domain {target_uuid} and scan_type {scan_type}")
         return
     
     last_position = {file: 0 for file in file_paths}
@@ -122,13 +122,13 @@ async def websocket_fetch_results(domain_id, scan_type):
         
         await asyncio.sleep(10)
 
-async def http_fetch_results(domain_id: str, file_type: str, limit: Optional[int], offset: int):
+async def http_fetch_results(target_uuid: str, file_type: str, limit: Optional[int], offset: int):
     data = manager.get_all_data()
-    domain_name, group_name = await get_domain_and_group(data, domain_id)
-    if not domain_name or not group_name:
-        raise HTTPException(status_code=404, detail="Domain or group not found")
+    domain_name, program_name = await get_domain_and_program(data, target_uuid)
+    if not domain_name or not program_name:
+        raise HTTPException(status_code=404, detail="Domain or program not found")
 
-    base_path = Path(ROOT_DATA_DIR) / group_name / domain_name
+    base_path = Path(ROOT_DATA_DIR) / program_name / domain_name
     file_mapping = {
         "urls": base_path / f"urls/{urls_file}",
         "extensions": base_path / f"urls/{extensions}",
@@ -152,17 +152,17 @@ async def http_fetch_results(domain_id: str, file_type: str, limit: Optional[int
     file_data = await read_file(file_path, limit, offset)
     return {
         "domain": domain_name,
-        "group": group_name,
+        "program": program_name,
         "content": file_data["content"],
         "total_lines": file_data["total_lines"],
         "limit": file_data["limit"],
         "offset": file_data["offset"]
     }
 
-async def websocket_read_results(domain_id, scan_type):
-    async for result in websocket_fetch_results(domain_id, scan_type):
+async def websocket_read_results(target_uuid, scan_type):
+    async for result in websocket_fetch_results(target_uuid, scan_type):
         return result
 
-async def http_read_results(domain_id: str, file_type: str, limit: Optional[int], offset: int):
-    return await http_fetch_results(domain_id, file_type, limit, offset)
+async def http_read_results(target_uuid: str, file_type: str, limit: Optional[int], offset: int):
+    return await http_fetch_results(target_uuid, file_type, limit, offset)
 

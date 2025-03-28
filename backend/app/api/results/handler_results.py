@@ -2,7 +2,7 @@ from backend.app.api.results.read_results import websocket_read_results
 from backend.app.api.results.read_results import http_read_results
 from backend.app.api.results.read_results import get_log_file_content
 from app.api.results.get_download_ready import get_download
-from app.api.results.get_download_ready import get_group_scan
+from app.api.results.get_download_ready import get_program_scan
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi import APIRouter
@@ -21,12 +21,12 @@ router = APIRouter()
 async def results():
     return {"message": "Yeah! Running"}
 
-@router.websocket("/subdomains/{domain_id}")
-async def api_running_results_subdomains(domain_id, websocket: WebSocket):
+@router.websocket("/subdomains/{target_uuid}")
+async def api_running_results_subdomains(target_uuid, websocket: WebSocket):
     try:
         await websocket.accept()
         while True:
-            result = await websocket_read_results(domain_id, 'subdomains') 
+            result = await websocket_read_results(target_uuid, 'subdomains') 
             
             await websocket.send_text(json.dumps(result)) 
             await asyncio.sleep(10)
@@ -38,12 +38,12 @@ async def api_running_results_subdomains(domain_id, websocket: WebSocket):
             await websocket.close()
 
 
-@router.websocket("/urls/{domain_id}")
-async def api_running_results_urls(domain_id, websocket: WebSocket):
+@router.websocket("/urls/{target_uuid}")
+async def api_running_results_urls(target_uuid, websocket: WebSocket):
     try:
         await websocket.accept() 
         while True:
-            result = await websocket_read_results(domain_id, 'urls')
+            result = await websocket_read_results(target_uuid, 'urls')
             
             await websocket.send_text(json.dumps(result))
             await asyncio.sleep(10)
@@ -56,10 +56,10 @@ async def api_running_results_urls(domain_id, websocket: WebSocket):
 
 
 
-@router.get("/get/{domain_id}")
-async def api_stored_results(domain_id: str, file: str = Query(..., description="The file name"), limit: Optional[int] = Query(20, gt=0), offset: int = Query(0, ge=0)):
+@router.get("/get/{target_uuid}")
+async def api_stored_results(target_uuid: str, file: str = Query(..., description="The file name"), limit: Optional[int] = Query(20, gt=0), offset: int = Query(0, ge=0)):
     try:
-        result = await http_read_results(domain_id, file, limit, offset)
+        result = await http_read_results(target_uuid, file, limit, offset)
         return result
     except HTTPException as http_exc:
         raise http_exc
@@ -82,110 +82,110 @@ async def api_get_log_file_content(pid: int = Query(..., description="Process ID
 
 # ============================[Download Routes]
 
-@router.get("/download/{group_name}")
-async def download_group_scan(group_name):
+@router.get("/download/{program_name}")
+async def download_program_scan(program_name):
     try:
-        result = await get_group_scan(group_name)
+        result = await get_program_scan(program_name)
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/subdomains")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/subdomains")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'subdomains')
+        result = await get_download(target_uuid, 'subdomains')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/live-subdomains")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/live-subdomains")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'live_subdomains')
-        return result
-    except Exception as e:
-        logger.exception(f"Error: {str(e)}")
-
-        
-@router.get("/download/{domain_id}/httpx-subdomains")
-async def download(domain_id):
-    try:
-        result = await get_download(domain_id, 'httpx_subdomains')
+        result = await get_download(target_uuid, 'live_subdomains')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
         
-@router.get("/download/{domain_id}/urls")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/httpx-subdomains")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'urls')
+        result = await get_download(target_uuid, 'httpx_subdomains')
+        return result
+    except Exception as e:
+        logger.exception(f"Error: {str(e)}")
+
+        
+@router.get("/download/{target_uuid}/urls")
+async def download(target_uuid):
+    try:
+        result = await get_download(target_uuid, 'urls')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/extensions")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/extensions")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'extensions')
+        result = await get_download(target_uuid, 'extensions')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/live-extensions")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/live-extensions")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'live_extensions')
+        result = await get_download(target_uuid, 'live_extensions')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
         
-@router.get("/download/{domain_id}/nuclei")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/nuclei")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'nuclei')
+        result = await get_download(target_uuid, 'nuclei')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
 
 
-@router.get("/download/{domain_id}/js_nuclei") # DONT REPLACE '_' WITH '-' THAT IS INTENTIONAL
-async def download(domain_id):
+@router.get("/download/{target_uuid}/js_nuclei") # DONT REPLACE '_' WITH '-' THAT IS INTENTIONAL
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'js_nuclei')
+        result = await get_download(target_uuid, 'js_nuclei')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
-@router.get("/download/{domain_id}/extracted-urls")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/extracted-urls")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'extracted_urls')
+        result = await get_download(target_uuid, 'extracted_urls')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
-@router.get("/download/{domain_id}/extracted-paths")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/extracted-paths")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'extracted-paths')
+        result = await get_download(target_uuid, 'extracted-paths')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
-@router.get("/download/{domain_id}/sensitive-data")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/sensitive-data")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'sensitive_data')
+        result = await get_download(target_uuid, 'sensitive_data')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")
 
-@router.get("/download/{domain_id}/sensitive-keywords")
-async def download(domain_id):
+@router.get("/download/{target_uuid}/sensitive-keywords")
+async def download(target_uuid):
     try:
-        result = await get_download(domain_id, 'sensitive_keywords')
+        result = await get_download(target_uuid, 'sensitive_keywords')
         return result
     except Exception as e:
         logger.exception(f"Error: {str(e)}")

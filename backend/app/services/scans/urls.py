@@ -13,14 +13,14 @@ db_ops = DatabaseOperations(db_manager)
 logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
 
-def func_urls_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_id, domain_id_list):
+def func_urls_ps(program_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_uuid, target_uuid_list):
     logger.debug("Starting url enumeration")
 
-    group_results = {}
+    program_results = {}
     
-    for domain, domain_id in zip(domain_list, domain_id_list):
-        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/urls"
-        domain_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}"
+    for domain, target_uuid in zip(domain_list, target_uuid_list):
+        result_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain}/urls"
+        domain_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain}"
         os.makedirs(result_dir, exist_ok=True)
         os.makedirs(f"{result_dir}/.logs", exist_ok=True)
         os.makedirs(f"{result_dir}/.tmp", exist_ok=True)
@@ -80,11 +80,11 @@ def func_urls_ps(group_name, domain_list, execution_style, include_api, tool_sel
             commands = all_commands
 
         # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="urls", execution_style=execution_style)
+        program_results[domain] = run_commands(program_name, domain, commands, program_uuid, target_uuid, scan_dir="urls", execution_style=execution_style)
 
         # organise files
         command = f"cd {result_dir} ; cat {waybackurls} {gau} {waymore} {katana} {hakrawler} | sort -u >> {urls_file} ; mv {waybackurls} {gau} {waymore} {katana} {hakrawler} .tmp/"
-        with open(f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}" , "a") as writeLog:
+        with open(f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}" , "a") as writeLog:
             process = subprocess.Popen(
                 command,
                 # stdout=writeLog,
@@ -95,19 +95,19 @@ def func_urls_ps(group_name, domain_list, execution_style, include_api, tool_sel
 
         logger.debug(f"URL Enum completed")
 
-def organise_urls(group_name, domain_list, program_id, domain_id_list):
-    group_results = {}
+def organise_urls(program_name, domain_list, program_uuid, target_uuid_list):
+    program_results = {}
     
-    for domain, domain_id in zip(domain_list, domain_id_list):
+    for domain, target_uuid in zip(domain_list, target_uuid_list):
         logger.debug(f"Organising URL Enum for {domain}")
-        result_dir = f"{ROOT_DATA_DIR}/{group_name}/{domain}/urls"
+        result_dir = f"{ROOT_DATA_DIR}/{program_name}/{domain}/urls"
         
         commands = [
             (
                 "Extracting JS Urls",
                 f"""cd {result_dir} ; cat {urls_file} | grep -F .js | cut -d'?' -f1 | cut -d'#' -f1 | sort -u >> {js_urls}""",
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}",
-                f"{ROOT_DATA_DIR}/{group_name}/{central_log_file}"
+                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}",
+                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}"
             ),
             (
                 f"Extensions",
@@ -145,12 +145,12 @@ def organise_urls(group_name, domain_list, program_id, domain_id_list):
             )
         ]
         # Execute commands and store the result
-        group_results[domain] = run_commands(group_name, domain, commands, program_id, domain_id, scan_dir="urls", execution_style="sequential")
+        program_results[domain] = run_commands(program_name, domain, commands, program_uuid, target_uuid, scan_dir="urls", execution_style="sequential")
 
         logger.debug(f"Urls arranged for {domain}")
 
 
-def start_urls_scan(group_name, domain_list, execution_style, config, program_id, domain_id_list):
+def start_urls_scan(program_name, domain_list, execution_style, config, program_uuid, target_uuid_list):
 
     url_enum = config
     
@@ -161,6 +161,6 @@ def start_urls_scan(group_name, domain_list, execution_style, config, program_id
     tool_selection = url_enum.get("toolSelection", False)
     selected_tools = url_enum.get("selectedTools", [])
 
-    func_urls_ps(group_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_id, domain_id_list)
-    organise_urls(group_name,domain_list, program_id, domain_id_list)
+    func_urls_ps(program_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_uuid, target_uuid_list)
+    organise_urls(program_name,domain_list, program_uuid, target_uuid_list)
     logger.info("URL enumration completed.")

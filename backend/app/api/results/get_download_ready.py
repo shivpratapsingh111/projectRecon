@@ -13,13 +13,13 @@ logger = setup_logger(__name__, log_file_path='download', enable_debug = True)
 manager = CommandExecutor()
 
 
-async def get_domain_and_group(data, domain_id):
-	for group_id, group_info in data["groups"].items():
-		domains = group_info["domains"]
-		if domain_id in domains:
-			domain_name = domains[domain_id]["domain_name"]
-			group_name = group_info["group_name"]
-			return domain_name, group_name
+async def get_domain_and_program(data, target_uuid):
+	for program_uuid, program_info in data["programs"].items():
+		domains = program_info["domains"]
+		if target_uuid in domains:
+			domain_name = domains[target_uuid]["domain_name"]
+			program_name = program_info["program_name"]
+			return domain_name, program_name
 	return None, None
 
 
@@ -50,19 +50,19 @@ async def delete_archive_after_delay(archive_path, delay=30):
 
 
 
-async def get_group_scan(group_name):
-	group_path = f"{ROOT_DATA_DIR}/{group_name}"
-	return await create_directory_archive(group_path)
+async def get_program_scan(program_name):
+	program_path = f"{ROOT_DATA_DIR}/{program_name}"
+	return await create_directory_archive(program_path)
  
-async def get_download(domain_id, file_name):
+async def get_download(target_uuid, file_name):
 	data = manager.get_all_data()
 
-	domain_name, group_name = await get_domain_and_group(data, domain_id)
+	domain_name, program_name = await get_domain_and_program(data, target_uuid)
 	
-	urls_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/urls"
-	subdomains_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/subdomains"
-	nuclei_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/nuclei"
-	js_directory_path = f"{ROOT_DATA_DIR}/{group_name}/{domain_name}/js"
+	urls_directory_path = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/urls"
+	subdomains_directory_path = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/subdomains"
+	nuclei_directory_path = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/nuclei"
+	js_directory_path = f"{ROOT_DATA_DIR}/{program_name}/{domain_name}/js"
 	file_path = None
 	if file_name == "subdomains":
 		file_path=f"{subdomains_directory_path}/{subdomains_file}"
