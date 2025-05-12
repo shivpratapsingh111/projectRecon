@@ -18,14 +18,14 @@ logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)
     
-async def get_existing_programnames():
+async def get_existing_program_names():
     try:
         data = db_ops.query_operations().get_all_programnames()
 
         if data is not None:
             flattened = [item[0] for item in data]  # Flatten the list
             unique_items = sorted(set(flattened))   # Remove duplicates and sort
-            return JSONResponse(content={"scan_name": unique_items}, status_code=200)
+            return JSONResponse(content={"program_names": unique_items}, status_code=200)
         else:
             return None
     

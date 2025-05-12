@@ -39,39 +39,10 @@ async def root():
     return {"message": "Yeah! Running"}
 
 
-
-
-app.include_router(handler_scan.router, prefix="/scan", tags=["Scanning"])
-app.include_router(handler_add.router, prefix="/add", tags=["Add"])
-app.include_router(handler_report.router, tags=["Report"])
-app.include_router(handler_monitor.router, prefix="/monitor", tags=["Endpoint Monitor"])
-app.include_router(handler_results.router, prefix="/results", tags=["Results"])
-app.include_router(handler_summary.router, prefix="/summary", tags=["Summary"])
-app.include_router(handler_terminal.router, prefix="/terminal", tags=["Terminal"])
-
-
-
-    # # CURL Request Example:
-# # curl -X POST "http://127.0.0.1:8000/input-box" \
-# #      -H "Content-Type: application/json" \
-# #      -d '{"data": ["example1", "example2", "example3"]}'
-
-# main.py
-# from fastapi import FastAPI, UploadFile, File, HTTPException
-
-# app = FastAPI()
-
-# @app.post("/upload-file")
-# async def upload_file(file: UploadFile = File(...)):
-#     """
-#     Accepts a single file upload using request body.
-#     """
-#     if not file:
-#         raise HTTPException(status_code=400, detail="No file provided.")
-#     content = await file.read()
-#     return {
-#         "filename": file.filename,
-#         "content_type": file.content_type,
-#         "size": len(content),
-#     }
-
+app.include_router(handler_scan.router, prefix="/scan", tags=["Start New Scan"])
+app.include_router(handler_add.router, prefix="/add", tags=["Add New Targets"])
+app.include_router(handler_report.router, tags=["Report With Automation"])
+app.include_router(handler_monitor.router, prefix="/monitor", tags=["Monitor Endpoints"])
+app.include_router(handler_results.router, prefix="/results", tags=["Get Results Of Preivous Scans"])
+app.include_router(handler_summary.router, prefix="/summary", tags=["Get Summary (total subdomains, etc) From Database"])
+app.include_router(handler_terminal.router, prefix="/terminal", tags=["Access Terminal"])

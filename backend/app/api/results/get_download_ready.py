@@ -66,27 +66,27 @@ async def get_download(target_uuid, file_name):
 	file_path = None
 	if file_name == "subdomains":
 		file_path=f"{subdomains_directory_path}/{subdomains_file}"
-	elif file_name == "live_subdomains":
+	elif file_name == "live-subdomains":
 		file_path=f"{subdomains_directory_path}/{live_subdomains}"
-	elif file_name == "httpx_subdomains":
+	elif file_name == "httpx-subdomains":
 		file_path=f"{subdomains_directory_path}/{httpx_subdomains}"
 	elif file_name == "urls":
 		file_path=f"{urls_directory_path}/{urls_file}"
 	elif file_name == "extensions":
 		file_path=f"{urls_directory_path}/{extensions}"
-	elif file_name == "live_extensions":
+	elif file_name == "live-extensions":
 		file_path=f"{urls_directory_path}/{live_extensions}"
 	elif file_name == "nuclei":
 		file_path=f"{nuclei_directory_path}/{nuclei_file}"
-	elif file_name == "js_nuclei":
+	elif file_name == "js-nuclei":
 		file_path=f"{js_directory_path}/{nuclei_file}"
-	elif file_name == "extracted_urls":
+	elif file_name == "extracted-urls":
 		file_path=f"{js_directory_path}/{extracted_urls}"
-	elif file_name == "extracted_paths":
+	elif file_name == "extracted-paths":
 		file_path=f"{js_directory_path}/{extracted_paths}"
-	elif file_name == "sensitive_data":
+	elif file_name == "sensitive-data":
 		file_path=f"{js_directory_path}/{sensitive_data}"
-	elif file_name == "sensitive_keywords":
+	elif file_name == "sensitive-keywords":
 		file_path=f"{js_directory_path}/{sensitive_keywords}"
 
 	try:

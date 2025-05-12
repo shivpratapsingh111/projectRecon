@@ -1,3 +1,5 @@
+# This will take program directory and it's json data file and insert all the subdomains and respective programs in DB
+
 import os
 import json
 import uuid
@@ -30,7 +32,7 @@ class DatabaseImporter:
         self.CREATE_PROGRAMS_TABLE = """
         CREATE TABLE IF NOT EXISTS programs (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            program_name TEXT NOT NULL,
+            program_name TEXT UNIQUE NOT NULL,
             program_url TEXT,
             acquisitions TEXT[],
             email TEXT,
@@ -43,7 +45,7 @@ class DatabaseImporter:
         CREATE TABLE IF NOT EXISTS web_targets (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             program_uuid UUID REFERENCES programs(id) ON DELETE CASCADE,
-            target_domain TEXT NOT NULL,
+            target_domain TEXT UNIQUE NOT NULL,
             technology TEXT[],
             status_code INTEGER,
             port INTEGER,
@@ -367,7 +369,7 @@ def main():
 
     # Initialize the DatabaseImporter
     importer = DatabaseImporter(
-        db_name='ttttttttttt',
+        db_name='recon_data_server',
         user='postgres',
         password='postgres'
     )

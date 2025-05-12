@@ -156,8 +156,6 @@ class CommandExecutor:
             logger.error(f"Error updating process status for PID {pid}: {str(e)}")
             return False
 
-
-
     def _execute_single_command(self, cmd_name: str, cmd: str, stdout_path: str, stderr_path: str, 
                               program_uuid: str, target_uuid: str) -> None:
         """Execute a single command and manage its state."""
