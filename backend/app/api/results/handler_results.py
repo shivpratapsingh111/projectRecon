@@ -1,24 +1,37 @@
-from backend.app.api.results.read_results import websocket_read_results
-from backend.app.api.results.read_results import http_read_results
-from backend.app.api.results.read_results import get_log_file_content
-from app.api.results.get_download_ready import get_download
-from app.api.results.get_download_ready import get_program_scan
-
-from fastapi import WebSocket, WebSocketDisconnect
-from fastapi import APIRouter
-import asyncio
-import json
-from fastapi import FastAPI, HTTPException, Query
+# External Imports
+import asyncio, json
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query, Path as FPath, Response
+from fastapi.responses import FileResponse
 from typing import Optional
 
+# Internal Imports
+from app.api.results.read_results import websocket_read_results
+from app.api.results.read_results import http_read_results
+from app.api.results.read_results import get_log_file_content
+from app.api.results.get_download_ready import get_download
+from app.api.results.get_download_ready import get_program_scan
 from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='results', enable_debug = True)
+from .data_model_results import (
+    StoredResultsResponse,
+    GetLogFileContentResponse,
+    LogTypeResponse,
+    DownloadType,
+    ProgramDownloadRequest,
+    TargetDownloadRequest
+    )
 
+# Initialization
+logger = setup_logger(__name__, log_file_path='results', enable_debug = True)
 router = APIRouter()
 
-
+# Handlers
 @router.websocket("/subdomains/{target_uuid}")
 async def api_running_results_subdomains(target_uuid, websocket: WebSocket):
+    """
+    - Get real-time stream of currenlty found subdomains, that refreshes every 10 seconds
+    - Returns a list of strings
+    - Ex: "[\"abc1.google.com\", \"abc2.google.com\", \"abc3.google.com\", \"abc4.google.com\"]"
+    """
     try:
         await websocket.accept()
         while True:
@@ -33,9 +46,16 @@ async def api_running_results_subdomains(target_uuid, websocket: WebSocket):
         if not websocket.client_state.DISCONNECTED:
             await websocket.close()
 
+# ---
 
 @router.websocket("/urls/{target_uuid}")
 async def api_running_results_urls(target_uuid, websocket: WebSocket):
+    """
+    - Get real-time stream of currenlty found urls, that refreshes every 10 seconds
+    - Returns a list of strings
+    - Ex: "[\"https://abc.com/path\", \"https://abc.com/path/ac\", \"https://abc.com/path/12\", \"https://abc.com/path/231\"]"
+    """
+
     try:
         await websocket.accept() 
         while True:
@@ -50,10 +70,28 @@ async def api_running_results_urls(target_uuid, websocket: WebSocket):
         if not websocket.client_state.DISCONNECTED:
             await websocket.close()
 
+# ---
 
+@router.get(
+    "/get/{target_uuid}",
+    response_model=StoredResultsResponse,
+    summary="Fetch stored scan results",
+    description="Retrieve a paginated portion of stored scan results for a given UUID and file."
+)
+async def api_stored_results(
+    target_uuid: str,
+    file: str = Query(..., description="The name of the file to fetch results from", example="subdomains.txt"),
+    limit: Optional[int] = Query(20, gt=0, description="Max number of lines to return", example=20),
+    offset: int = Query(0, ge=0, description="Line offset to start returning from", example=0)
+):
+    """
+    Get stored scan results for a specific target UUID and file.
 
-@router.get("/get/{target_uuid}")
-async def api_stored_results(target_uuid: str, file: str = Query(..., description="The file name"), limit: Optional[int] = Query(20, gt=0), offset: int = Query(0, ge=0)):
+    - **target_uuid**: Unique ID for the scan target.
+    - **file**: Name of the file containing the results.
+    - **limit**: Maximum number of result lines to return (default 20).
+    - **offset**: Start line offset in the results (default 0).
+    """
     try:
         result = await http_read_results(target_uuid, file, limit, offset)
         return result
@@ -63,164 +101,115 @@ async def api_stored_results(target_uuid: str, file: str = Query(..., descriptio
         logger.exception(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/get-log")
-async def api_get_log_file_content(pid: int = Query(..., description="Process ID"), log_type: str = Query(..., description="Log type")):
+# ---
+
+@router.get(
+    "/get-log",
+    response_model=GetLogFileContentResponse,
+    summary="Fetch raw process log",
+    description=(
+        "Retrieve the full contents of a process's log file. "
+        "The response is a JSON object containing the raw log lines, "
+        "with newlines escaped (`\\n`) and double quotes escaped."
+    ),
+    response_description="A JSON object with a single `content` field holding the escaped log text"
+)
+async def api_get_log_file_content(
+    pid: int = Query(
+        ...,
+        description="The process ID whose log you want to retrieve",
+        example=8190
+    ),
+    log_type: LogTypeResponse = Query(
+        ...,
+        description="Type of log to fetch (`stderr_log` or `stdout_log`)",
+        example=LogTypeResponse.stdout_log
+    )
+):
+    """
+    - **pid**: Integer process ID.
+    - **log_type**: Either `stderr_log` or `stdout_log`.
+    """
     try:
-        result = await get_log_file_content(pid, log_type)
-        return result
+        raw = await get_log_file_content(pid, log_type.value)
+        return GetLogFileContentResponse(content=raw)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        logger.exception(f"Unexpected error: {e}")
+        logger.exception(f"Unexpected error fetching log for pid={pid}, type={log_type}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+#---
 
+@router.get(
+    "/download/{program_name}",
+    summary="Download full program scan as ZIP",
+    description=(
+        "Returns a `.zip` archive containing all stored scan results for the given program name. "
+        "Delivered as a downloadable attachment."
+    ),
+    response_description="ZIP file download",
+response_class=FileResponse)
+async def download_program_scan(
+    program_name: str = FPath(
+        ...,
+        description="Program identifier to fetch scan results for",
+        example="google"
+    )
+):
+    """
+    - **program_name**: the name of the program whose scan you wish to download.
+    """
+    req = ProgramDownloadRequest(program_name=program_name)
 
-# ============================[Download Routes]
-
-# Valid download types (include all valid keys)
-VALID_DOWNLOAD_TYPES = {
-    "subdomains",
-    "live-subdomains",
-    "httpx-subdomains",
-    "urls",
-    "extensions",
-    "live-extensions",
-    "nuclei",
-    "js-nuclei",
-    "extracted-urls",
-    "extracted-paths",
-    "sensitive-data",
-    "sensitive-keywords",
-}
-
-@router.get("/download/{program_name}", response_model=dict)
-async def download_program_scan(program_name: str):
     try:
-        result = await get_program_scan(program_name)
-        return result
+        file_response = await get_program_scan(req.program_name)
+        return file_response
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("Failed to download program scan.")
+        logger.exception(f"Failed to download program scan for {req.program_name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/download/{target_uuid}/{download_type}", response_model=dict)
-async def download_target_data(target_uuid: str, download_type: str):
-    if download_type not in VALID_DOWNLOAD_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid download type: {download_type}")
-    
+
+# ---
+
+@router.get(
+    "/download/{target_uuid}/{download_type}",
+    summary="Download specific scan data as TXT",
+    description=(
+        "Returns a `.txt` file (as raw bytes) of one category of scan results "
+        "(e.g. `subdomains`, `urls`, etc.) for a given target UUID, "
+        "with newline characters escaped (`\\n`). Delivered as an attachment."
+    ),
+    response_description="Plain-text file download",
+response_class=FileResponse)
+async def download_target_data(
+    target_uuid: str = FPath(
+        ...,
+        description="UUID of the scan target",
+        example="123e4567-e89b-12d3-a456-426614174000"
+    ),
+    download_type: DownloadType = FPath(
+        ...,
+        description="Type of data slice to download",
+        example=DownloadType.subdomains
+    )
+):
+    """
+    - **target_uuid**: UUID of the target whose data to download.
+    - **download_type**: one of the allowed categories (see `DownloadType` enum).
+    """
+    # Validate & group
+    req = TargetDownloadRequest(target_uuid=target_uuid, download_type=download_type)
+
     try:
-        result = await get_download(target_uuid, download_type)
-        return result
+        file_response = await get_download(req.target_uuid, req.download_type.value)
+        return file_response
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception(f"Failed to download data for {download_type}.")
+        logger.exception(f"Failed to download {download_type} for {target_uuid}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-#
-#  @router.get("/download/{program_name}")
-# async def download_program_scan(program_name):
-#     try:
-#         result = await get_program_scan(program_name)
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-        
-# @router.get("/download/{target_uuid}/subdomains")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'subdomains')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-        
-# @router.get("/download/{target_uuid}/live-subdomains")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'live_subdomains')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-        
-# @router.get("/download/{target_uuid}/httpx-subdomains")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'httpx_subdomains')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-        
-# @router.get("/download/{target_uuid}/urls")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'urls')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-        
-# @router.get("/download/{target_uuid}/extensions")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'extensions')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-        
-# @router.get("/download/{target_uuid}/live-extensions")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'live_extensions')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-        
-# @router.get("/download/{target_uuid}/nuclei")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'nuclei')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-
-
-# @router.get("/download/{target_uuid}/js_nuclei") # DONT REPLACE '_' WITH '-' THAT IS INTENTIONAL
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'js_nuclei')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-# @router.get("/download/{target_uuid}/extracted-urls")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'extracted_urls')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-# @router.get("/download/{target_uuid}/extracted-paths")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'extracted-paths')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-# @router.get("/download/{target_uuid}/sensitive-data")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'sensitive_data')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")
-
-# @router.get("/download/{target_uuid}/sensitive-keywords")
-# async def download(target_uuid):
-#     try:
-#         result = await get_download(target_uuid, 'sensitive_keywords')
-#         return result
-#     except Exception as e:
-#         logger.exception(f"Error: {str(e)}")

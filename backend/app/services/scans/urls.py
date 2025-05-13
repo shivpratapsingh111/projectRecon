@@ -84,7 +84,7 @@ def func_urls_ps(program_name, domain_list, execution_style, include_api, tool_s
 
         # organise files
         command = f"cd {result_dir} ; cat {waybackurls} {gau} {waymore} {katana} {hakrawler} | sort -u >> {urls_file} ; mv {waybackurls} {gau} {waymore} {katana} {hakrawler} .tmp/"
-        with open(f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}" , "a") as writeLog:
+        with open(f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}" , "a") as writeLog:
             process = subprocess.Popen(
                 command,
                 # stdout=writeLog,
@@ -106,8 +106,8 @@ def organise_urls(program_name, domain_list, program_uuid, target_uuid_list):
             (
                 "Extracting JS Urls",
                 f"""cd {result_dir} ; cat {urls_file} | grep -F .js | cut -d'?' -f1 | cut -d'#' -f1 | sort -u >> {js_urls}""",
-                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}",
-                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}"
+                f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}",
+                f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}"
             ),
             (
                 f"Extensions",

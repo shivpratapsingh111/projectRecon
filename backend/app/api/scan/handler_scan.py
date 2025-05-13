@@ -202,6 +202,7 @@ async def process_scan(
     except (ValueError, TypeError, json.JSONDecodeError) as e:
         raise HTTPException(status_code=422, detail=f"Invalid scanOptions format: {e}")
 
+
     return await new_scan(
         domain=domain,
         program_name=programName,

@@ -1,39 +1,40 @@
-from app.config.config  import *
-from fastapi import UploadFile, Form
-from fastapi.responses import JSONResponse
-from typing import List, Union
-import asyncio
+# External Imports
 from fastapi import APIRouter
+from fastapi import UploadFile, Form
+from typing import Union
+import asyncio
 
+# Internal Imports
 from app.logger.logger import setup_logger
+from app.config.config  import *
+from app.api.monitor_endpoints.endpoint_db_manager import (
+	add_new_endpoints,
+    get_review_endpoints,
+    get_response_body_changes,
+    mark_review_endpoints,
+    get_endpoints_by_status,
+    update_endpoint_status,
+    update_endpoint_scan_interval,
+    get_existing_programs,
+    get_existing_scans
+)
+from app.api.monitor_endpoints.start_scan import (
+    start_periodic_monitoring_scans,
+    stop_periodic_monitoring_scans,
+    get_scan_state
+)
+
+# Initialization
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
-
-from app.api.monitor_endpoints.endpoint_db_manager import add_new_endpoints
-from app.api.monitor_endpoints.endpoint_db_manager import get_review_endpoints
-from app.api.monitor_endpoints.endpoint_db_manager import get_response_body_changes
-from app.api.monitor_endpoints.endpoint_db_manager import mark_review_endpoints
-from app.api.monitor_endpoints.endpoint_db_manager import get_endpoints_by_status
-from app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_status
-from app.api.monitor_endpoints.endpoint_db_manager import update_endpoint_scan_interval
-from app.api.monitor_endpoints.endpoint_db_manager import get_existing_programs
-from app.api.monitor_endpoints.endpoint_db_manager import get_existing_scans
-from app.api.monitor_endpoints.start_scan import run_periodic_scans
-from app.api.monitor_endpoints.start_scan import stop_scans
-from app.api.monitor_endpoints.start_scan import get_scan_state
-
 router = APIRouter()
 
-@router.get("")
-async def monitor():
-    return {"message": "Yeah! Running"}
-
-
+# Handlers
 @router.post("/new")
 async def api_add_new_endpoints(
     endpoint: Union[str, None] = Form(None), 
     scan_name: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
-    scan_options: Union[str, None] = Form(None),  # JSON string of selected scan options
+    scan_options: Union[str, None] = Form(None),
 ):
     return await add_new_endpoints(scan_name, endpoint, file, scan_options)
 
@@ -51,12 +52,12 @@ async def api_get_existing_scans():
 
 @router.post("/start-scans")
 async def api_start_scan():
-    asyncio.create_task(run_periodic_scans())
+    asyncio.create_task(start_periodic_monitoring_scans())
     return {"message": "Scan Started"}
 
 @router.post("/stop-scans")
 async def api_start_scan():
-    return await stop_scans()
+    return await stop_periodic_monitoring_scans()
 
 @router.get("/review-endpoints")
 async def review_endpoints():

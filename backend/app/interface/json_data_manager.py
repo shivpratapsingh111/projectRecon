@@ -7,7 +7,7 @@ from filelock import FileLock, Timeout
 from typing import Dict, Any, Optional
 from app.logger.logger import setup_logger
 logger = setup_logger(__name__, log_file_path='scan', enable_debug = True)
-from app.config.config import data_file
+from app.config.config import PROGRAMS_DATA_FILE
 
 class ProgramManagementError(Exception):
     """Custom exception for program management operations."""
@@ -15,7 +15,7 @@ class ProgramManagementError(Exception):
 
 class ProgramManager:
     def __init__(self):
-        self.file_path = data_file
+        self.file_path = PROGRAMS_DATA_FILE
         self.lock_file_path = f"{self.file_path}.lock"
         self.lock = FileLock(self.lock_file_path, timeout=10)
         self._initialize_file()

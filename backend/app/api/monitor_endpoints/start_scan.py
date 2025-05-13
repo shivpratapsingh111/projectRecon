@@ -1,50 +1,49 @@
-import asyncio
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from app.services.monitor_endpoints.service_monitor import monitor_endpoints
+# External Imports
 from collections import defaultdict
 import urllib.parse
 import urllib.request
+import asyncio
+
+# Internal Imports
 from app.config.db_config import db_config
-
+from app.services.monitor_endpoints.db.db_manager import DatabaseManager
+from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
+from app.services.monitor_endpoints.service_monitor import monitor_endpoints
 from app.logger.logger import setup_logger
+from app.config.config import(
+    TELEGRAM_WEBHOOK, 
+	TELEGRAM_CHAT_ID,
+	MONITOR_SCANS_PERIOD
+)
+
+# Initialization
 logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = True)
-
-
 db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)
 
-# Shared flag to control task execution
-scan_status = False
+scan_status = False # Shared flag to control task execution
 
+# Logic
 async def send_telegram_message(message: str):
     logger.debug(f"Notifying on Telegram: {message}")
-    
-    url = 
+    url = TELEGRAM_WEBHOOK
     payload = {
-        ,
-        'text': message
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message
     }
-    
-    # Encode the data for POST request
     data = urllib.parse.urlencode(payload).encode()
-
-    # Run the request in a separate thread to avoid blocking the asyncio event loop
     try:
-        # Use asyncio.to_thread to run the synchronous urllib code in a non-blocking manner
         response = await asyncio.to_thread(make_request, url, data)
         if response.status == 200:
             logger.info("Message sent successfully")
         else:
             logger.exception(f"Failed to send message: {response.status}")
-        
         logger.debug("Notification sent on Telegram")
-    
     except Exception as e:
         logger.exception(f"Error sending message: {e}")
-
     logger.debug("Done with Notification")
 
+# ---
 
 def make_request(url, data):
     try:
@@ -55,12 +54,12 @@ def make_request(url, data):
         logger.exception(f"Error in urllib request: {e}")
         raise
     
+# ---
     
 def get_endpoints_by_status(status):
     try:
         data = db_ops.query_operations().get_endpoints_data_by_status(status)
         result = []
-
         if data is not None:
             for row in data:
                 entry = {
@@ -76,25 +75,23 @@ def get_endpoints_by_status(status):
                     'new_body_file_path': row[8],
                     'last_check': str(row[9])
                 }
-
                 program_name = db_ops.query_operations().get_program_name(row[1])
                 if program_name:
                     entry['program_name'] = program_name[0][0]
                 else:
                     entry['program_name'] = None
                 result.append(entry)
-
             return result
         else:
             return None
-
     except Exception as e:
         logger.exception(f"Error fetching endpoints by status: {e}")
         return None
 
+# ---
+
 def groupby_urls_by_scan_name(endpoints):
     grouped = defaultdict(list)
-
     for endpoint in endpoints:
         scan_name = endpoint['scan_name']
         grouped[scan_name].append({
@@ -102,8 +99,9 @@ def groupby_urls_by_scan_name(endpoints):
             'scan_interval': endpoint['scan_interval'],
             'last_check': endpoint['last_check']
         })
-
     return grouped
+
+# ---
 
 async def start_scan_for_group(scan_name, urls):
     url_strings = [entry['url'] for entry in urls]
@@ -111,12 +109,13 @@ async def start_scan_for_group(scan_name, urls):
     logger.debug(f"Got result {result}")
     return result
 
+# ---
+
 async def schedule_scans():
     active_endpoints = get_endpoints_by_status("active")
     logger.debug(f"Got {len(active_endpoints)} active endpoints.")
     if active_endpoints:
         grouped_endpoints = groupby_urls_by_scan_name(active_endpoints)
-
         for scan_name, urls in grouped_endpoints.items():
             result = await start_scan_for_group(scan_name, urls)
             logger.debug(f"Got result {result}")
@@ -126,30 +125,36 @@ async def schedule_scans():
         logger.warning("No Active endpoints found for scan")
         await send_telegram_message("No Active endpoints found for scan")
 
-async def run_periodic_scans():
+# ---
+
+async def start_periodic_monitoring_scans():
     logger.info("In periodic Scan funtion")
     global scan_status
-
-    scan_status = True
-
+    scan_status = True # UPDATE Global Variable
     while scan_status:
         logger.info("Starting scheduled scans...")
         result = await schedule_scans()
         logger.debug(result)
         logger.info("Scheduled scans completed. Waiting for the next interval...")
-        await asyncio.sleep(7200)  # 2 hours interval
+        await asyncio.sleep(MONITOR_SCANS_PERIOD)
     logger.info(f"Scan Satus {scan_status}")
     return
 
-async def stop_scans():
+# ---
+
+async def stop_periodic_monitoring_scans():
     global scan_status
     scan_status = False
     logger.info("Scheduled scans stopped...")
     return {"message": "Stopping scheduled scans..."}
 
+# ---
+
 async def get_scan_state():
     global scan_status
     return scan_status
 
-# To start the scans, call run_periodic_scans in an asyncio event loop
-# To stop the scans, call stop_scans
+# ---
+
+# To start the periodic monitoring scan, call start_periodic_monitoring_scans in an asyncio event loop
+# To stop the periodic monitoring scan, call stop_periodic_monitoring_scans

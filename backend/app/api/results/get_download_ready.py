@@ -36,7 +36,7 @@ async def create_directory_archive(directory_path):
                 file_path = os.path.join(root, file)
                 zipf.write(file_path, os.path.relpath(file_path, directory_path))
 
-    threading.Thread(target=asyncio.run, args=(delete_archive_after_delay(archive_path, 10),), daemon=True).start()
+    threading.Thread(target=asyncio.run, args=(delete_archive_after_delay(archive_path, 30),), daemon=True).start()
 
     return FileResponse(archive_path, media_type='application/zip', filename=os.path.basename(archive_path))
 

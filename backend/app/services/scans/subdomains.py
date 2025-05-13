@@ -30,8 +30,8 @@ def organise_subdomains(program_name, domain_list, program_uuid, target_uuid_lis
             (
                 "Organising_Subdomains", 
                 f"""cd {result_dir} ; cat {passive_subdomains} {active_subdomains} | awk '{{print $1}}' | awk '{{print tolower($0)}}' | grep -iE "^(.*\\.)?{domain}$" | sed 's/^[^a-zA-Z0-9]*//' | sed -E 's#^https?://##; s#^www*\\.##' | sort -u >> {subdomains_file} ; mv {passive_subdomains} {active_subdomains} bbot/ .tmp/ ; sort -u {subdomains_file} -o {subdomains_file}""",
-                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}", 
-                f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}"
+                f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}", 
+                f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}"
             )
         ]
         # Add Httpx Subdomains only if `httpx` is True
@@ -40,8 +40,8 @@ def organise_subdomains(program_name, domain_list, program_uuid, target_uuid_lis
                 (
                     "Httpx_Subdomains", 
                     f"""cd {result_dir} ; cat {subdomains_file} | /usr/bin/httpx -server -td -sc -title -json -o httpx_subdomains.json 2> /dev/null ; cat httpx_subdomains.json | jq -r 'select(.status_code == 200) | .url' > {live_subdomains}""", 
-                    f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}", 
-                    f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}"
+                    f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}", 
+                    f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}"
                 )
             )
 
@@ -51,8 +51,8 @@ def organise_subdomains(program_name, domain_list, program_uuid, target_uuid_lis
                 (
                     "Screenshot Subdomains",
                     f"cd {result_dir} ; nuclei -l {subdomains_file} -rate-limit 25 -bulk-size 5 -concurrency 5 -headless-bulk-size 3 -headless-concurrency 3 -js-concurrency 3 -probe-concurrency 10 -headless -t ~/nuclei-templates/headless/screenshot.yaml",
-                    f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}", 
-                    f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}"
+                    f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}", 
+                    f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}"
                 )
             )
 
@@ -153,7 +153,7 @@ def func_subdomains_ps(program_name, domain_list, execution_style, include_api, 
     
         command = f"cd {result_dir} ; cp bbot/subdomains.txt {bbot} ; cat {bbot} {subdominator} {subfinder} {cero} {sublist3r} {yass} {githubsubdomains} {gitlabsubdomains} > {passive_subdomains} ; sort -u {passive_subdomains} -o {passive_subdomains} ; mv {bbot} {subdominator} {subfinder} {cero} {sublist3r} {yass} {githubsubdomains} {gitlabsubdomains} .tmp/" 
         
-        with open(f"{ROOT_DATA_DIR}/{program_name}/{central_log_file}" , "a") as writeLog:
+        with open(f"{ROOT_DATA_DIR}/{program_name}/{CENTRAL_LOG_FILE}" , "a") as writeLog:
             process = subprocess.Popen(
                 command,
                 # stdout=writeLog,
