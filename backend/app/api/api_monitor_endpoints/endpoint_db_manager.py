@@ -185,7 +185,7 @@ async def get_existing_scans():
         logger.exception("Error in getting scan names")
         raise HTTPException(status_code=500, detail=f"Error in getting scan names: {e}")
 
-async def add_new_endpoints(scan_name, endpoint, file, scan_options):
+async def insert_new_endpoints(scan_name, endpoint, file, scan_options):
     
     current_data = {
         'program_uuid': None,

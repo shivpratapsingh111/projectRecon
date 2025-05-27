@@ -21,23 +21,22 @@ def handle_exit(*args):
 signal.signal(signal.SIGINT, handle_exit)
 signal.signal(signal.SIGTERM, handle_exit)
 
-# Kill existing tmux session if it exists, then create a new one
-cleanup()
-subprocess.run(["tmux", "new-session", "-d", "-s", BACKEND_SESSION])
-subprocess.run(["tmux", "new-session", "-d", "-s", FRONTEND_SESSION])
-subprocess.run(["tmux", "send-keys", "-t", BACKEND_SESSION, "cd backend/ && uvicorn main:app --host 0.0.0.0 --port 8000", "C-m"])
-subprocess.run(["tmux", "send-keys", "-t", FRONTEND_SESSION, "cd ~/vsCode/pentest-dashboard/ && npm run dev", "C-m"])
-
 async def read_tmux_output(websocket: WebSocket):
-    """ Continuously read tmux output and send to the WebSocket client. """
     last_output = ""
-    while True:
-        result = subprocess.run(["tmux", "capture-pane", "-p", "-t", BACKEND_SESSION, "-S-"], capture_output=True, text=True)
-        output = result.stdout
-        if output != last_output:
-            last_output = output
-            await websocket.send_text(output)
-        await asyncio.sleep(0.2)
+    try:
+        while True:
+            result = subprocess.run(
+                ["tmux", "capture-pane", "-p", "-t", BACKEND_SESSION, "-S-"],
+                capture_output=True, text=True
+            )
+            output = result.stdout
+            if output != last_output:
+                last_output = output
+                await websocket.send_text(output)
+            await asyncio.sleep(0.2)
+    except Exception as e:
+        print(f"Error in read_tmux_output: {e}")
+
 
 @app.websocket("/terminal/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -54,6 +53,13 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
+# Kill existing tmux session if it exists, then create a new one
+    cleanup()
+    subprocess.run(["tmux", "new-session", "-d", "-s", BACKEND_SESSION])
+    subprocess.run(["tmux", "new-session", "-d", "-s", FRONTEND_SESSION])
+    subprocess.run(["tmux", "send-keys", "-t", BACKEND_SESSION, "cd backend/ && uvicorn main:app --host 0.0.0.0 --port 8000", "C-m"])
+    subprocess.run(["tmux", "send-keys", "-t", FRONTEND_SESSION, "cd ~/vsCode/pentest-dashboard/ && npm run dev", "C-m"])
+
     try:
         uvicorn.run(app, host="0.0.0.0", port=8002)
     finally:

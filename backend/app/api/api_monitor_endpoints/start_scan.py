@@ -4,7 +4,7 @@ import urllib.parse
 import urllib.request
 import asyncio
 
-# Internal Imports
+# Local Imports
 from app.config.db_config import db_config
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations

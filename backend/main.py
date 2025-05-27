@@ -7,15 +7,15 @@ from fastapi import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.db_manager import DatabaseManager
-from app.api.mail_reports import handler_report
-from app.api.add import handler_add
-from app.api.monitor_endpoints import handler_monitor
-from app.api.results import handler_results
-from app.api.summary import handler_summary
-from app.api.terminal import handler_terminal
+from app.api.api_mail_reports import handler_report
+from app.api.api_insert import handler_insert
+from app.api.api_monitor_endpoints import handler_monitor
+from app.api.api_results import handler_results
+from app.api.api_summary import handler_summary
+from app.api.api_terminal import handler_terminal
 
 from app.config.db_config import db_config
-from app.api.scan import handler_scan
+from app.api.api_scan import handler_scan
 
 db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
 
@@ -40,7 +40,7 @@ async def root():
 
 
 app.include_router(handler_scan.router, prefix="/scan", tags=["Start New Scan"])
-app.include_router(handler_add.router, prefix="/add", tags=["Add New Targets"])
+app.include_router(handler_insert.router, prefix="/insert", tags=["Insert New Targets"])
 app.include_router(handler_report.router, tags=["Report With Automation"])
 app.include_router(handler_monitor.router, prefix="/monitor", tags=["Monitor Endpoints"])
 app.include_router(handler_results.router, prefix="/results", tags=["Get Results Of Preivous Scans"])

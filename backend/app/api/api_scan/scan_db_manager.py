@@ -1,8 +1,7 @@
 # External Imports
 from fastapi.responses import JSONResponse
-from fastapi import HTTPException
 
-# Internal Imports
+# Local Imports
 from app.config.db_config import db_config
 from app.services.scans.db.db_manager import DatabaseManager
 from app.services.scans.db.db_operations import DatabaseOperations
@@ -27,4 +26,10 @@ async def get_existing_program_names():
     
     except Exception as e:
         logger.exception("Error in getting program names")
-        raise HTTPException(status_code=500, detail=f"Error in getting program names: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "message": f"Error in getting program names: {e}",
+            }
+        )

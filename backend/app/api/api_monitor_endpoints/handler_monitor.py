@@ -4,11 +4,11 @@ from fastapi import UploadFile, Form
 from typing import Union
 import asyncio
 
-# Internal Imports
+# Local Imports
 from app.logger.logger import setup_logger
 from app.config.config  import *
-from app.api.monitor_endpoints.endpoint_db_manager import (
-	add_new_endpoints,
+from app.api.api_monitor_endpoints.endpoint_db_manager import (
+	insert_new_endpoints,
     get_review_endpoints,
     get_response_body_changes,
     mark_review_endpoints,
@@ -18,7 +18,7 @@ from app.api.monitor_endpoints.endpoint_db_manager import (
     get_existing_programs,
     get_existing_scans
 )
-from app.api.monitor_endpoints.start_scan import (
+from app.api.api_monitor_endpoints.start_scan import (
     start_periodic_monitoring_scans,
     stop_periodic_monitoring_scans,
     get_scan_state
@@ -30,13 +30,13 @@ router = APIRouter()
 
 # Handlers
 @router.post("/new")
-async def api_add_new_endpoints(
+async def api_insert_new_endpoints(
     endpoint: Union[str, None] = Form(None), 
     scan_name: Union[str, None] = Form(None),
     file: Union[UploadFile, None] = None,
     scan_options: Union[str, None] = Form(None),
 ):
-    return await add_new_endpoints(scan_name, endpoint, file, scan_options)
+    return await insert_new_endpoints(scan_name, endpoint, file, scan_options)
 
 @router.get("/get-scan-state")
 async def api_get_scan_state():

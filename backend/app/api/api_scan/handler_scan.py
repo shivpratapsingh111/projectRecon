@@ -4,11 +4,12 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
     UploadFile,
+    status,
     File,
-    HTTPException,
     Form,
 )
-import asyncio, json
+import asyncio, json, traceback
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from typing import Literal, Optional
 
@@ -16,19 +17,20 @@ from typing import Literal, Optional
 from app.interface.process_manager import CommandExecutor
 from app.config.config import *
 from app.config.db_config import db_config
-from app.api.scan.new_scan import new_scan
+from app.api.api_scan.new_scan import new_scan
 from app.services.monitor_endpoints.db.db_manager import DatabaseManager
 from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from app.api.scan.scan_db_manager import get_existing_program_names
+from app.api.api_scan.scan_db_manager import get_existing_program_names
 from app.logger.logger import setup_logger
 from .data_model_scan import (
+    Generic__Response,
     ProgramsData,
     ExistingProgramNamesResponse,
     ScanOptionsRequest,
     StopCommandProcessResponse,
     ProcessScanResponse,
     StopDomainProcessResponse,
-    StopProgramProcessResponse
+    StopProgramProcessResponse,
 )
 
 # Initialization
@@ -53,8 +55,12 @@ async def websocket_get_all(websocket: WebSocket):
     except ValidationError as e:
         logger.error(f"Data validation failed: {e}")
         await websocket.close(code=1003)  # 1003 = Unsupported Data
-        raise HTTPException(
-            status_code=500, detail="Invalid data format received from manager"
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "message": "Invalid data format received from manager",
+            },
         )
 
     except WebSocketDisconnect:
@@ -64,7 +70,13 @@ async def websocket_get_all(websocket: WebSocket):
         logger.exception(f"Unhandled error: {str(e)}")
         if not websocket.client_state.DISCONNECTED:
             await websocket.close()
-        raise HTTPException(status_code=500, detail="Unexpected server error")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "message": "Unexpected server error",
+            },
+        )
 
 
 # ---
@@ -72,7 +84,7 @@ async def websocket_get_all(websocket: WebSocket):
 
 @router.get(
     "/get-all",
-    response_model=ProgramsData,
+    response_model=Generic__Response[ProgramsData],
     summary="Get all program data",
 )
 async def api_get_all():
@@ -80,10 +92,24 @@ async def api_get_all():
     Returns a dictionary of all available program data in detail.
     """
     try:
-        result = manager.get_all_data()
-        return ProgramsData(**result)
+        data = manager.get_all_data()
+        result = {
+            "status": True,
+            "message": "Programs data fetched successfully",
+            "data": data,
+        }
+        return Generic__Response[ProgramsData](**result)
     except Exception as e:
-        logger.exception(f"Error: {str(e)}")
+        full_trace = traceback.format_exc()
+        logger.error(f"Error at api handler level: {e} \n {full_trace}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": False,
+                "message": "Error at api handler level",
+                "debug": {"error": str(e), "traceback": full_trace},
+            },
+        )
 
 
 # ---
@@ -104,16 +130,28 @@ async def api_get_existing_program_names():
 # ---
 
 
+@router.get(
+    "/verify-scan-setup",
+    response_model=ExistingProgramNamesResponse,
+    summary="Get all existing program names",
+)
+async def api_verify_scan_setup():
+    """
+    Verifies the reqired system environment before running scan.
+    """
+    return await get_existing_program_names()
+
+
+# ---
+
+
 @router.post(
     "/process-scan",
     response_model=ProcessScanResponse,
     summary="Start a scan",
 )
 async def process_scan(
-    domain: str = Form(
-        ...,
-        description="Comma-separated domains"
-    ),
+    domain: str = Form(..., description="Comma-separated domains"),
     programName: str = Form(
         ...,
         description="Program name to which target domain belongs.",
@@ -200,8 +238,13 @@ async def process_scan(
         parsed_options = json.loads(scanOptions)
         validated_options = ScanOptionsRequest(**parsed_options)
     except (ValueError, TypeError, json.JSONDecodeError) as e:
-        raise HTTPException(status_code=422, detail=f"Invalid scanOptions format: {e}")
-
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": False,
+                "message": "Invalid scanOptions format: {e}",
+            },
+        )
 
     return await new_scan(
         domain=domain,
@@ -229,13 +272,20 @@ async def stop_command_processes(process_id: str):
         result = manager.kill_process_by_pid(process_id, "single")
         return StopCommandProcessResponse(status=result)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": False,
+                "message": f"{str(e)}",
+            },
+        )
 
 
 # ---
 
 
-@router.post("/stop/domain/{program_uuid}/{target_uuid}",
+@router.post(
+    "/stop/domain/{program_uuid}/{target_uuid}",
     response_model=StopDomainProcessResponse,
     summary="Stop all running commands under a domain",
 )
@@ -248,13 +298,20 @@ async def stop_domain_processes(program_uuid: str, target_uuid: str):
         result = manager.kill_domain_processes(program_uuid, target_uuid)
         return {f"status of domain {target_uuid} of program {program_uuid}": result}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": False,
+                "message": f"{str(e)}",
+            },
+        )
 
 
 # ---
 
 
-@router.post("/stop/program/{program_name}",
+@router.post(
+    "/stop/program/{program_name}",
     response_model=StopProgramProcessResponse,
     summary="Stop all running commands under a program",
 )
@@ -268,4 +325,10 @@ async def stop_program_processes(program_name: str):
         result = manager.kill_program_processes(program_name)
         return {f"status of {program_name}": result}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": False,
+                "message": f"{str(e)}",
+            },
+        )
