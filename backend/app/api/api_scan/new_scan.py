@@ -1,37 +1,38 @@
-
 # External Imports
 import asyncio
-from fastapi.responses import JSONResponse
+from fastapi import status
 
 # Local Imports
-from app.logger.logger import setup_logger
 from app.interface.scan_manager import start_scan
+from app.logger.logger import setup_logger
+from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
+logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
+
 
 # Logic
 async def new_scan(domain, program_name, file, execution_style, scan_options):
 
     if not domain and not file:
-        logger.error("Neither domain nor file is provided, provide either 'domain' or 'file'")
-        return JSONResponse(
-            status_code=422,
-            content={
-                "status": False,
-                "message": "Neither domain nor file is provided, provide either 'domain' or 'file'"
-            }
+        logger.error(
+            "Neither domain nor file is provided, provide either 'domain' or 'file'"
         )
+        return {
+            "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "status": False,
+            "message": "Neither domain nor file is provided, provide either 'domain' or 'file'",
+        }
 
     if domain and file:
-        logger.error("File and domain both are provided, provide either 'domain' or 'file'")
-        return JSONResponse(
-            status_code=422,
-            content={
-                "status": False,
-                "message": "File and domain both are provided, provide either 'domain' or 'file'"
-            }
+        logger.error(
+            "File and domain both are provided, provide either 'domain' or 'file'"
         )
+        return {
+            "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "status": False,
+            "message": "File and domain both are provided, provide either 'domain' or 'file'",
+        }
 
     domain_list = []
 
@@ -40,10 +41,18 @@ async def new_scan(domain, program_name, file, execution_style, scan_options):
 
     if file:
         file_content = (await file.read()).decode("utf-8")
-        domain_list += [line.strip() for line in file_content.splitlines() if line.strip()]
+        domain_list += [
+            line.strip() for line in file_content.splitlines() if line.strip()
+        ]
 
-    logger.debug(f"Scan_Name: {program_name}, \nDomains{domain_list}, \n Scan_Options{scan_options}")
+    logger.debug(
+        f"Program_Name: {program_name}, \nDomains{domain_list}, \n Scan_Options{scan_options}"
+    )
 
-    asyncio.create_task(asyncio.to_thread(start_scan, program_name, domain_list, execution_style, scan_options))
+    asyncio.create_task(
+        asyncio.to_thread(
+            start_scan, program_name, domain_list, execution_style, scan_options
+        )
+    )
 
     return {"status": True, "message": "Scan started successfully"}

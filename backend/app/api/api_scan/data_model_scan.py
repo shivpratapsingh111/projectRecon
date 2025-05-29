@@ -98,7 +98,7 @@ class Program(BaseModel):
     )
 
 
-class ProgramsData(BaseModel):
+class ProgramsData__Response(BaseModel):
     programs: Optional[Dict[str, Program]] = Field(
         default=None,
         description="Mapping of unique program IDs to their corresponding program data, including domains and command execution info",
@@ -108,8 +108,8 @@ class ProgramsData(BaseModel):
 # ---
 
 
-class ExistingProgramNamesResponse(BaseModel):
-    scan_name: Optional[List[str]] = Field(
+class ExistingProgramNames__Response(BaseModel):
+    program_names: Optional[List[str]] = Field(
         default=None,
         example=[
             "CUCHD",
@@ -175,7 +175,7 @@ class JSOptions(BaseModel):
     regexOnly: bool
 
 
-class ScanOptionsRequest(BaseModel):
+class ScanOptions__Request(BaseModel):
     subdomainEnum: Optional[SubdomainEnumOptions]
     urlEnum: Optional[UrlEnumOptions]
     nuclei: Optional[NucleiOptions]
@@ -186,35 +186,35 @@ class ScanOptionsRequest(BaseModel):
 # ---
 
 
-class ProcessScanResponse(BaseModel):
+class ProcessScan__Response(BaseModel):
     message: str = Field(..., example="Scan started successfully")
 
 
 # ---
 
 
-class VerifyScanSetupResponse(BaseModel):
+class VerifyScanSetup__Response(BaseModel):
     message: str = Field(..., example="Environment setup verified.")
 
 
 # ---
 
 
-class StopCommandProcessResponse(BaseModel):
+class StopCommandProcess__Response(BaseModel):
     status: Literal["killed", "not found"] = Field(..., example="killed")
 
 
 # ---
 
 
-class StopDomainProcessResponse(BaseModel):
-    status: List = Field(..., example=[3344, 12312, 3213])
+class StopDomainProcess__Response(BaseModel):
+    killed_pids: List[int] = Field(..., example=[3344, 12312, 3213])
 
 
 # ---
 
 
-class StopProgramProcessResponse(BaseModel):
+class StopProgramProcess__Response(BaseModel):
     status: List = Field(..., example=[3344, 12312, 3213])
 
 
@@ -222,6 +222,7 @@ class StopProgramProcessResponse(BaseModel):
 
 
 class Generic__Response(BaseModel, Generic[T]):
+    status_code: Optional[int] = Field(default=None, example=200)
     status: bool = Field(
         ..., example=True, description="Indicates if the request was successfull"
     )

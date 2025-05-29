@@ -275,10 +275,10 @@ class CommandExecutor:
             
         except ProcessLookupError:
             logger.error(f"Process with PID {pid} not found")
-            return "Not found"
+            return False
         except Exception as e:
             logger.error(f"Error killing process {pid}: {str(e)}")
-            return "Error in killing"
+            return False
 
 
     def kill_domain_processes(self, program_uuid, target_uuid: str) -> List[int]:

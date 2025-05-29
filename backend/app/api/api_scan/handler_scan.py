@@ -24,17 +24,19 @@ from app.api.api_scan.scan_db_manager import get_existing_program_names
 from app.logger.logger import setup_logger
 from .data_model_scan import (
     Generic__Response,
-    ProgramsData,
-    ExistingProgramNamesResponse,
-    ScanOptionsRequest,
-    StopCommandProcessResponse,
-    ProcessScanResponse,
-    StopDomainProcessResponse,
-    StopProgramProcessResponse,
+    ProgramsData__Response,
+    ExistingProgramNames__Response,
+    ScanOptions__Request,
+    StopCommandProcess__Response,
+    ProcessScan__Response,
+    StopDomainProcess__Response,
+    StopProgramProcess__Response,
 )
+from app.logger.logger import setup_logger
+from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization
-logger = setup_logger(__name__, log_file_path="web_scan", enable_debug=True)
+logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
 db_manager = DatabaseManager(db_config)
 db_ops = DatabaseOperations(db_manager)
 router = APIRouter()
@@ -48,7 +50,7 @@ async def websocket_get_all(websocket: WebSocket):
         await websocket.accept()
         while True:
             result = manager.get_all_data()
-            validated_data = ProgramsData.parse_obj(result)
+            validated_data = ProgramsData__Response.parse_obj(result)
             await websocket.send_text(validated_data.json())
             await asyncio.sleep(10)
 
@@ -84,7 +86,7 @@ async def websocket_get_all(websocket: WebSocket):
 
 @router.get(
     "/get-all",
-    response_model=Generic__Response[ProgramsData],
+    response_model=Generic__Response[ProgramsData__Response],
     summary="Get all program data",
 )
 async def api_get_all():
@@ -98,7 +100,16 @@ async def api_get_all():
             "message": "Programs data fetched successfully",
             "data": data,
         }
-        return Generic__Response[ProgramsData](**result)
+        if result["status"]:
+            return Generic__Response[ProgramsData__Response](**result)
+        else:
+            return JSONResponse(
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                content=result,
+            )
+
     except Exception as e:
         full_trace = traceback.format_exc()
         logger.error(f"Error at api handler level: {e} \n {full_trace}")
@@ -117,37 +128,84 @@ async def api_get_all():
 
 @router.get(
     "/get-existing-programnames",
-    response_model=ExistingProgramNamesResponse,
+    response_model=Generic__Response[ExistingProgramNames__Response],
     summary="Get all existing program names",
 )
 async def api_get_existing_program_names():
     """
     Returns a list of all program names already existing in the database.
     """
-    return await get_existing_program_names()
+    try:
+        result = await get_existing_program_names()
+        if result["status"]:
+            return Generic__Response[ExistingProgramNames__Response](**result)
+        else:
+            return JSONResponse(
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                content=result,
+            )
+
+    except Exception as e:
+        full_trace = traceback.format_exc()
+        logger.error(f"Error at api handler level: {e} \n {full_trace}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": False,
+                "message": "Error at api handler level",
+                "debug": {"error": str(e), "traceback": full_trace},
+            },
+        )
 
 
 # ---
 
+# ===UNDER CONSTRUCTION===
 
-@router.get(
-    "/verify-scan-setup",
-    response_model=ExistingProgramNamesResponse,
-    summary="Get all existing program names",
-)
-async def api_verify_scan_setup():
-    """
-    Verifies the reqired system environment before running scan.
-    """
-    return await get_existing_program_names()
+# @router.get(
+#     "/verify-scan-setup",
+#     response_model=SET_THIS_UP,
+#     summary="Get all existing program names",
+# )
+# async def api_verify_scan_setup():
+#     """
+#     Verifies the reqired system environment before running scan.
+#     """
+#     try:
+#         result =  {
+#                 "status": True,
+#                 "message": "Verification completed",
+#                 "data": "All tools are installed, Enviornment is ready to run scan.",
+#                 "debug": {"error": str(e), "traceback": full_trace},
+#             }
+#         if result["status"]:
+#             return Generic__Response[SET_THIS_UP](**result)
+#         else:
+#             return JSONResponse(
+#                 status_code=result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR),
+#                 content=result,
+#             )
 
+#     except Exception as e:
+#         full_trace = traceback.format_exc()
+#         logger.error(f"Error at api handler level: {e} \n {full_trace}")
+#         return JSONResponse(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             content={
+#                 "status": False,
+#                 "message": "Error at api handler level",
+#                 "debug": {"error": str(e), "traceback": full_trace},
+#             },
+#         )
 
 # ---
 
 
 @router.post(
     "/process-scan",
-    response_model=ProcessScanResponse,
+    response_model=Generic__Response[ProcessScan__Response],
     summary="Start a scan",
 )
 async def process_scan(
@@ -235,24 +293,48 @@ async def process_scan(
     ```
     """
     try:
-        parsed_options = json.loads(scanOptions)
-        validated_options = ScanOptionsRequest(**parsed_options)
-    except (ValueError, TypeError, json.JSONDecodeError) as e:
+        try:
+            parsed_options = json.loads(scanOptions)
+            validated_options = ScanOptions__Request(**parsed_options)
+        except (ValueError, TypeError, json.JSONDecodeError) as e:
+            full_trace = traceback.format_exc()
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "status": False,
+                    "message": f"Invalid scanOptions format",
+                    "debug": {"error": str(e), "traceback": full_trace},
+                },
+            )
+
+        result = await new_scan(
+            domain=domain,
+            program_name=programName,
+            file=file,
+            execution_style=execution_style,
+            scan_options=validated_options.dict(),
+        )
+        if result["status"]:
+            return Generic__Response[ProcessScan__Response](**result)
+        else:
+            return JSONResponse(
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                content=result,
+            )
+
+    except Exception as e:
+        full_trace = traceback.format_exc()
+        logger.error(f"Error at api handler level: {e} \n {full_trace}")
         return JSONResponse(
-            status_code=422,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": False,
-                "message": "Invalid scanOptions format: {e}",
+                "message": "Error at api handler level",
+                "debug": {"error": str(e), "traceback": full_trace},
             },
         )
-
-    return await new_scan(
-        domain=domain,
-        program_name=programName,
-        file=file,
-        execution_style=execution_style,
-        scan_options=validated_options.dict(),
-    )
 
 
 # ---
@@ -260,7 +342,7 @@ async def process_scan(
 
 @router.post(
     "/stop/command/{process_id}",
-    response_model=StopCommandProcessResponse,
+    response_model=Generic__Response[StopCommandProcess__Response],
     summary="Stop a running command",
 )
 async def stop_command_processes(process_id: str):
@@ -269,14 +351,34 @@ async def stop_command_processes(process_id: str):
     - Returns either `killed` or `not found`.
     """
     try:
-        result = manager.kill_process_by_pid(process_id, "single")
-        return StopCommandProcessResponse(status=result)
-    except ValueError as e:
+        response = manager.kill_process_by_pid(process_id, "single")
+        result = {
+            "status_code": (
+                status.HTTP_200_OK if response else status.HTTP_404_NOT_FOUND
+            ),
+            "status": response,
+            "message": "Killed successfully" if response else "Not Found",
+            "data": {"status": "killed" if response else "not found"},
+        }
+        if result["status"]:
+            return Generic__Response[StopCommandProcess__Response](**result)
+        else:
+            return JSONResponse(
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                content=result,
+            )
+
+    except Exception as e:
+        full_trace = traceback.format_exc()
+        logger.error(f"Error at api handler level: {e} \n {full_trace}")
         return JSONResponse(
-            status_code=422,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": False,
-                "message": f"{str(e)}",
+                "message": "Error at api handler level",
+                "debug": {"error": str(e), "traceback": full_trace},
             },
         )
 
@@ -286,7 +388,7 @@ async def stop_command_processes(process_id: str):
 
 @router.post(
     "/stop/domain/{program_uuid}/{target_uuid}",
-    response_model=StopDomainProcessResponse,
+    response_model=Generic__Response[StopDomainProcess__Response],
     summary="Stop all running commands under a domain",
 )
 async def stop_domain_processes(program_uuid: str, target_uuid: str):
@@ -295,40 +397,49 @@ async def stop_domain_processes(program_uuid: str, target_uuid: str):
     - Returns a list of killed pids
     """
     try:
-        result = manager.kill_domain_processes(program_uuid, target_uuid)
-        return {f"status of domain {target_uuid} of program {program_uuid}": result}
-    except ValueError as e:
+        response = manager.kill_domain_processes(program_uuid, target_uuid)
+        result = {
+            "status": True,
+            "message": f"Killed these PIDs {response}",
+            "data": {"killed_pids": response},
+        }
+        return Generic__Response[StopDomainProcess__Response](**result)
+    except Exception as e:
+        full_trace = traceback.format_exc()
+        logger.error(f"Error at api handler level: {e} \n {full_trace}")
         return JSONResponse(
-            status_code=422,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": False,
-                "message": f"{str(e)}",
+                "message": "Error at api handler level",
+                "debug": {"error": str(e), "traceback": full_trace},
             },
         )
 
 
 # ---
 
+# ===UNDER CONSTRUCTION===
 
-@router.post(
-    "/stop/program/{program_name}",
-    response_model=StopProgramProcessResponse,
-    summary="Stop all running commands under a program",
-)
-async def stop_program_processes(program_name: str):
-    """
-    - Kill all processes running under a program by program_name
-    - Returns a list of killed pids
-    """
+# @router.post(
+#     "/stop/program/{program_name}",
+#     response_model=StopProgramProcess__Response,
+#     summary="Stop all running commands under a program",
+# )
+# async def stop_program_processes(program_name: str):
+#     """
+#     - Kill all processes running under a program by program_name
+#     - Returns a list of killed pids
+#     """
 
-    try:
-        result = manager.kill_program_processes(program_name)
-        return {f"status of {program_name}": result}
-    except ValueError as e:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "status": False,
-                "message": f"{str(e)}",
-            },
-        )
+#     try:
+#         result = manager.kill_program_processes(program_name)
+#         return {f"status of {program_name}": result}
+#     except ValueError as e:
+#         return JSONResponse(
+#             status_code=422,
+#             content={
+#                 "status": False,
+#                 "message": f"{str(e)}",
+#             },
+#         )

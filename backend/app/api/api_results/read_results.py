@@ -70,10 +70,11 @@ async def get_log_file_content(pid, log_type):
             }
         
     except Exception as e:
+        logger.error(f"Error: {str(e)}")
         full_trace = traceback.format_exc()
         return {
                 "status": False,
-                "message": "File not found",
+                "message": "Something went wrong",
                 "debug": {"error": str(e), "traceback": full_trace},
             }
 

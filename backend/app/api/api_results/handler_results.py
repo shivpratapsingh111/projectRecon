@@ -18,7 +18,6 @@ from app.api.api_results.read_results import http_read_results
 from app.api.api_results.read_results import get_log_file_content
 from app.api.api_results.get_download_ready import get_download
 from app.api.api_results.get_download_ready import get_program_scan_results
-from app.logger.logger import setup_logger
 from .data_model_results import (
     Generic__Response,
     StoredResults__Request,
@@ -30,6 +29,7 @@ from .data_model_results import (
     DownloadProgramScanResults__Response,
     DownloadLogFile__Response,
 )
+from app.logger.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization

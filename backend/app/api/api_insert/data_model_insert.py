@@ -76,6 +76,7 @@ class InsertWebTarget__Request(BaseModel):
 
 
 class Generic__Response(BaseModel):
+    status_code: Optional[int] = Field(default=None, example=200)
     status: bool = Field(
         ..., example=True, description="Indicates if the request was successfull"
     )

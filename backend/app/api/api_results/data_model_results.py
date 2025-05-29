@@ -139,6 +139,7 @@ class DownloadLogFile__Response(BaseModel):
 
 
 class Generic__Response(BaseModel, Generic[T]):
+    status_code: Optional[int] = Field(default=None, example=200)
     status: bool = Field(
         ..., example=True, description="Indicates if the request was successfull"
     )
