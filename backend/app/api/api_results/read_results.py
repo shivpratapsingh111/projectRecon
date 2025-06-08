@@ -238,7 +238,7 @@ async def http_fetch_results(target_uuid: str, file_type: str, limit: Optional[i
     file_data = await read_file(file_path, limit, offset)
     return {
         "status": True,
-        "message": "List of subdomains",
+        "message": "Successfully fetched data",
         "data": {
         "domain": domain_name,
         "program": program_name,
@@ -261,9 +261,9 @@ async def http_read_results(target_uuid: str, file_type: str, limit: Optional[in
         return await http_fetch_results(target_uuid, file_type, limit, offset)
     except Exception as e:
         full_trace = traceback.format_exc()
-        logger.exception(f"Unexpected error: {e}")
+        logger.exception(f"Unexpected error while reading {file_type} file: {e}")
         return {
                 "status": False,
-                "message": "Internal server error",
+                "message": f"Unexpected error while reading {file_type} file",
                 "debug": {"error": str(e), "traceback": full_trace}
             }

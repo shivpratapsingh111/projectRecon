@@ -12,7 +12,6 @@ from app.api.api_insert import handler_insert
 from app.api.api_monitor_endpoints import handler_monitor
 from app.api.api_results import handler_results
 from app.api.api_summary import handler_summary
-from app.api.api_terminal import handler_terminal
 
 from app.config.db_config import db_config
 from app.api.api_scan import handler_scan
@@ -45,4 +44,3 @@ app.include_router(handler_report.router, tags=["Report With Automation"])
 app.include_router(handler_monitor.router, prefix="/monitor", tags=["Monitor Endpoints"])
 app.include_router(handler_results.router, prefix="/results", tags=["Get Results Of Preivous Scans"])
 app.include_router(handler_summary.router, prefix="/summary", tags=["Get Summary (total subdomains, etc) From Database"])
-app.include_router(handler_terminal.router, prefix="/terminal", tags=["Access Terminal"])

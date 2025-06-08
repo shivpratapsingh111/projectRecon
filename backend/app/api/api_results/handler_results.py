@@ -144,7 +144,9 @@ async def api_stored_results(
             return Generic__Response[StoredResults__Response](**result)
         else:
             return JSONResponse(
-                status_code=result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR),
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
                 content=result,
             )
     except Exception as e:
@@ -158,6 +160,7 @@ async def api_stored_results(
                 "debug": {"error": str(e), "traceback": full_trace},
             },
         )
+
 
 # ---
 
@@ -196,7 +199,9 @@ async def api_get_log_file_content(
             return Generic__Response[GetLogFileContent__Response](**result)
         else:
             return JSONResponse(
-                status_code=result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR),
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
                 content=result,
             )
     except Exception as e:
@@ -210,6 +215,7 @@ async def api_get_log_file_content(
                 "debug": {"error": str(e), "traceback": full_trace},
             },
         )
+
 
 # ---
 
@@ -241,7 +247,9 @@ async def download_program_scan(
             return Generic__Response[DownloadProgramScanResults__Response](**result)
         else:
             return JSONResponse(
-                status_code=result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR),
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
                 content=result,
             )
     except Exception as e:
@@ -255,6 +263,8 @@ async def download_program_scan(
                 "debug": {"error": str(e), "traceback": full_trace},
             },
         )
+
+
 # ---
 
 
@@ -287,14 +297,18 @@ async def download_target_data(
     """
     try:
         # Validate & group
-        req = TargetDownload__Request(target_uuid=target_uuid, download_type=download_type)
+        req = TargetDownload__Request(
+            target_uuid=target_uuid, download_type=download_type
+        )
 
         result = await get_download(req.target_uuid, req.download_type.value)
         if result["status"]:
             return Generic__Response[DownloadLogFile__Response](**result)
         else:
             return JSONResponse(
-                status_code=result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR),
+                status_code=result.get(
+                    "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
                 content=result,
             )
     except Exception as e:
