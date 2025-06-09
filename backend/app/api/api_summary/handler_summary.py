@@ -33,7 +33,7 @@ async def api_get_count(data: Literal["subdomains", "programs", "endpoints"] = Q
     """
     response = {
         "status": None,
-        "message": "",
+        "message": "Successfully fetched data",
         "data": None,
     }
     try:
