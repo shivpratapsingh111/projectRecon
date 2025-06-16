@@ -1,4 +1,4 @@
-# External Imports
+# External imports
 from fastapi import (
     APIRouter,
     WebSocket,
@@ -13,15 +13,10 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from typing import Literal, Optional
 
-# Local Imports
-from app.interface.process_manager import CommandExecutor
-from app.config.config import *
-from app.config.db_config import db_config
+# Internal imports
 from app.api.api_scan.new_scan import new_scan
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
 from app.api.api_scan.scan_db_manager import get_existing_program_names
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
 from .data_model_scan import (
     Generic__Response,
     ProgramsData__Response,
@@ -32,13 +27,12 @@ from .data_model_scan import (
     StopDomainProcess__Response,
     StopProgramProcess__Response,
 )
-from app.logger.logger import setup_logger
+from app.interface.process_manager import CommandExecutor
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization
-logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
+logger = setup_logger(__name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG)
 router = APIRouter()
 manager = CommandExecutor()
 

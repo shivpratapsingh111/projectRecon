@@ -1,25 +1,39 @@
-import subprocess
-import psycopg2
+# External imports
 from psycopg2.extras import execute_values
-import uuid
-import json
+import subprocess, psycopg2, json, os
 
-from app.config.config  import *
-from app.config.db_config  import db_config
+# External imports
 from app.interface.process_manager import run_commands
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
+from app.interface.logger import setup_logger
+from app.interface.database_manager import db_ops
+from app.config.db_config  import DB_CONFIG
+from app.config.config import (
+    ROOT_DATA_DIR,
+	LOG_LEVEL_DEBUG,
+    CENTRAL_LOG_FILE,
+    passive_subdomains,
+    active_subdomains,
+    subdomains_file,
+    live_subdomains,
+    subdominator,
+    subfinder,
+    cero,
+    sublist3r,
+    yass,
+    githubsubdomains,
+    gitlabsubdomains,
+    bbot,
+    alterx,
+    httpx_subdomains,
+    puredns_ResolversFile,
+)
 
-from app.db.db_manager import DatabaseManager
-from app.db.db_operations import DatabaseOperations
-from app.db.db_queries import QueryManager
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
-db_query = QueryManager
-
+# Initialization
+logger = setup_logger(__name__, log_file_path='service', enable_debug = LOG_LEVEL_DEBUG)
 program_results = {}
 
 
+# Logic
 def organise_subdomains(program_name, domain_list, program_uuid, target_uuid_list, httpx, screenshot):
 
     for domain, target_uuid in zip(domain_list, target_uuid_list):
@@ -63,6 +77,7 @@ def organise_subdomains(program_name, domain_list, program_uuid, target_uuid_lis
         if screenshot:
             logger.debug(f"Screenshot [Completed] [{domain}]")
 
+# ---
 
 def func_subdomains_ps(program_name, domain_list, execution_style, include_api, tool_selection, selected_tools, program_uuid, target_uuid_list):
     program_results = {}
@@ -165,6 +180,7 @@ def func_subdomains_ps(program_name, domain_list, execution_style, include_api, 
             process.wait()
         logger.info(f"Passive Subdomains completed for {domain}")
 
+# ---
 
 def func_subdomains_ac(program_name, domain_list, execution_style, program_uuid, target_uuid_list):
     program_results = {}
@@ -197,11 +213,13 @@ def func_subdomains_ac(program_name, domain_list, execution_style, program_uuid,
         
         logger.info(f"Active Subdomains completed for {domain}")
 
+# ---
 
 def read_subdomains_from_file(file_path):
     with open(file_path, "r") as file:
         return [line.strip() for line in file if line.strip()]
 
+# ---
 
 def update_subdomains_to_db(program_name, domain_list):
     batch_size=10000
@@ -218,7 +236,7 @@ def update_subdomains_to_db(program_name, domain_list):
             subdomains = read_subdomains_from_file(file_path)
             program_uuid = str(db_ops.query_operations().get_program_uuid(program_name))
 
-            with psycopg2.connect(**db_config) as conn:
+            with psycopg2.connect(**DB_CONFIG) as conn:
                 with conn.cursor() as cursor:
                    
                     for i in range(0, len(subdomains), batch_size):
@@ -231,9 +249,13 @@ def update_subdomains_to_db(program_name, domain_list):
                     conn.commit()
                     logger.debug(f"All subdomains inserted in DB. [Count: {len(subdomains)}]")
 
+# ---
+
 def read_jsonl_file(file_path):
     with open(file_path, "r") as file:
         return [json.loads(line) for line in file]
+
+# ---
 
 def update_httpx_subdomains_to_db(program_name, domain_list):
     for domain in domain_list:
@@ -259,6 +281,7 @@ def update_httpx_subdomains_to_db(program_name, domain_list):
             logger.exception(f"Error occured while updating HTTPX subdomains data. {e}")        
             logger.debug(f"All subdomains data updated to DB. [Count: {len(subdomains_data)}]")
 
+ # ---
             
 def start_subdomains_scan(program_name, domain_list, execution_style, config, program_uuid, target_uuid_list):
     subdomain_enum = config

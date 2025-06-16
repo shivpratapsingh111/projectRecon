@@ -1,10 +1,10 @@
-# External Imports
+# External imports
 import traceback
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
-# Local Imports
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from .insert_manager import insert_program
 from .insert_manager import insert_mobile_target
@@ -18,7 +18,7 @@ from .data_model_insert import (
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_insert", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
 router = APIRouter()
 

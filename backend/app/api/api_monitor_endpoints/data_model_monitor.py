@@ -1,15 +1,15 @@
-# External Imports
+# External imports
 from typing import Generic, Optional
 from pydantic import BaseModel, Field
 from typing import Optional, TypeVar, Dict, Any, List
 
-# Local Imports
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Intialization
 logger = setup_logger(
-    __name__, log_file_path="api_monitor_endpoints", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
 T = TypeVar(
     "T"

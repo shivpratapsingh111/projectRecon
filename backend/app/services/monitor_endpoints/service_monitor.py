@@ -1,37 +1,18 @@
-    
-from .change_detector import EndpointChangeDetector
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from app.config.db_config import db_config
-
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
-
-
-from aiohttp import ClientSession, ClientTimeout, ClientConnectorError, ClientOSError, ServerTimeoutError, ClientSSLError
-from aiohttp import ClientSession, ClientTimeout
+# External imports
+from aiohttp import ClientSession, ClientTimeout, ServerTimeoutError
 from urllib.parse import urlparse
-from datetime import datetime
 from dataclasses import dataclass
 from typing import Optional, Tuple, List, Dict, Any
-import mimetypes
-import aiohttp
-import requests
-import asyncio
-import hashlib
-import socket
-import random
-import ssl
-import os
+import mimetypes, aiohttp, asyncio, hashlib, socket, random, ssl, os
 
-@dataclass
-class ChangeMetadata:
-    field_name: str
-    old_value: any
-    new_value: any
+# Internal imports
+from .change_detector import EndpointChangeDetector
+from app.interface.logger import setup_logger
+from app.config.config import ROOT_DATA_DIR, LOG_LEVEL_DEBUG
+from app.interface.database_manager import db_ops
 
-# Constants
-ROOT_DATA_DIR = os.path.expanduser("~/projectRecon-Data/").rstrip('/')
+# Initialization
+logger = setup_logger(__name__, log_file_path='service', enable_debug = LOG_LEVEL_DEBUG)
 MAX_CONCURRENT_REQUESTS = 10
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2
@@ -48,6 +29,12 @@ USER_AGENTS = [
 @dataclass
 class ChangeMetadata:
     field_name: str
+    old_value: any
+    new_value: any
+
+@dataclass
+class ChangeMetadata:
+    field_name: str
     old_value: Any
     new_value: Any
 
@@ -60,6 +47,7 @@ class ResponseData:
     headers: Dict[str, str]
     content_type: str
 
+# Logic
 class FileManager:
     def __init__(self, root_dir: str, scan_name: str):
         self.result_dir = f"{root_dir}/{scan_name}/monitoring/responses"
@@ -95,10 +83,11 @@ class FileManager:
             
         return old_path, new_path
 
+# ---
+
 class EndpointMonitor:
-    def __init__(self, db_config: dict):        
-        self.db_manager = DatabaseManager(db_config)
-        self.db_ops = DatabaseOperations(self.db_manager)
+    def __init__(self):        
+        self.db_ops = db_ops
         self.change_detector = EndpointChangeDetector(self.db_ops)
         self.file_manager = FileManager(ROOT_DATA_DIR, "")
 
@@ -147,6 +136,7 @@ class EndpointMonitor:
         logger.error(f"Max retries reached for {url}, request failed.")
         return None
 
+# ---
 
     async def get_program_and_target_id(self, url):
             logger.info(f"Getting Program and Target Id for {url}")
@@ -154,6 +144,7 @@ class EndpointMonitor:
             ids = self.db_ops.query_operations().get_target_and_program_uuid(target_domain)
             return ids
 
+# ---
 
     async def process_response(self, url: str, status, headers, content, scan_name: str) -> None:
         try:
@@ -230,6 +221,8 @@ class EndpointMonitor:
         except Exception as e:
             logger.exception(f"Error processing response for {url}: {str(e)}")
 
+# ---
+
     async def worker(self, worker_id: int, queue: asyncio.Queue, session: ClientSession, scan_name: str):
         while True:
             logger.info(f"In while")
@@ -261,12 +254,16 @@ class EndpointMonitor:
             queue.task_done()  # Mark task as done after processing URL
             logger.info(f"Worker {worker_id} finished processing: {url}")
 
+# ---
+
     @staticmethod
     def get_ssl_context() -> ssl.SSLContext:
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         return context
+
+# ---
 
     @staticmethod
     def generate_headers() -> Dict[str, str]:
@@ -276,6 +273,8 @@ class EndpointMonitor:
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive'
         }
+
+# ---
 
     async def run(self, urls: List[str], scan_name: str):
         self.file_manager = FileManager(ROOT_DATA_DIR, scan_name)
@@ -312,11 +311,11 @@ class EndpointMonitor:
             # Ensure all workers have exited
             await asyncio.gather(*workers)
 
+# ---
+
 async def monitor_endpoints(urls: List[str], scan_name: str):
         
-    monitor = EndpointMonitor(
-        db_config=db_config
-    )
+    monitor = EndpointMonitor()
         
     print("=====[START]=====")
     await monitor.run(urls, scan_name)

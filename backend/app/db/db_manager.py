@@ -1,26 +1,32 @@
-# db_manager.py
-
-# ===[Imports]===
+# External imports
 from typing import Dict, List, Optional, Any, Tuple
 import psycopg2
 
-# ===[Local Imports]===
-from app.testDB.not_needed.db_queries import QueryManager
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='monitor_endpoints', enable_debug = False)
+# Internal imports
+from app.db.db_queries import QueryManager
+from app.interface.logger import setup_logger
+from app.config.config import LOG_LEVEL_DEBUG
 
+# Initialization
+logger = setup_logger(
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
+)
 
+# Logic
 class DatabaseManager:
-    def __init__(self, db_config: Dict):
-        self.db_config = db_config
+
+    def __init__(self, DB_CONFIG: Dict):
+        self.DB_CONFIG = DB_CONFIG
 
         # Initialize database and tables
         self._initialize_database()
 
+# ---
+
     def _initialize_database(self):
         """Create database if it doesn't exist and initialize tables"""
         # First connect to default postgres database to create our database if needed
-        temp_config = self.db_config.copy()
+        temp_config = self.DB_CONFIG.copy()
         target_db = temp_config.pop('dbname')
         temp_config['dbname'] = 'postgres'
         
@@ -55,7 +61,7 @@ class DatabaseManager:
                 conn.close()
         
         try:
-            conn = psycopg2.connect(**self.db_config)
+            conn = psycopg2.connect(**self.DB_CONFIG)
             conn.autocommit = True        
             cur = conn.cursor()
             
@@ -81,12 +87,14 @@ class DatabaseManager:
             if conn:
                 conn.close()
 
+# ---
+
     def execute_query(self, query: str, params: Tuple) -> Optional[Any]:
         """Execute a query and return results if any"""
         conn = None
         cur = None
         try:
-            conn = psycopg2.connect(**self.db_config)
+            conn = psycopg2.connect(**self.DB_CONFIG)
             conn.autocommit = True
             cur = conn.cursor()
             cur.execute(query, params)
@@ -113,12 +121,14 @@ class DatabaseManager:
             if conn:
                 conn.close()
 
+# ---
+
     def execute_many(self, query: str, params_list: List[Tuple]) -> None:
         """Execute the same query with multiple parameter sets"""
         conn = None
         cur = None
         try:
-            conn = psycopg2.connect(**self.db_config)
+            conn = psycopg2.connect(**self.DB_CONFIG)
             conn.autocommit = True
             cur = conn.cursor()
             cur.executemany(query, params_list)

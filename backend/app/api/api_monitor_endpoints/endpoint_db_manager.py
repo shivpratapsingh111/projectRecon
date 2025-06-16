@@ -1,22 +1,17 @@
-# External Imports
+# External imports
 from fastapi import status
 from urllib.parse import urlparse
 import traceback, shutil, json, os
 
-# Local Imports
-from app.config.db_config import db_config
-from app.config.config import ROOT_DATA_DIR
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.services.monitor_endpoints.db.db_operations import DatabaseOperations
-from app.logger.logger import setup_logger
-from app.config.config import LOG_LEVEL_DEBUG
+# Internal imports
+from app.interface.logger import setup_logger
+from app.config.config import ROOT_DATA_DIR, LOG_LEVEL_DEBUG
+from app.interface.database_manager import db_ops
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_monitor_endpoints", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
 
 
 # Logic

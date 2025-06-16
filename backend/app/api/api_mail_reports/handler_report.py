@@ -1,14 +1,15 @@
-from app.config.config  import *
+# External imports
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter
 
+# Internal imports
+from app.config.config  import LOG_LEVEL_DEBUG
+from app.services.mail_reports.report import send_report
+from app.interface.logger import setup_logger
 
-from app.services.mail_reports.report import *
-
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='mail_reports', enable_debug = False)
-
+# Initialization
+logger = setup_logger(__name__, log_file_path='api', enable_debug = LOG_LEVEL_DEBUG)
 router = APIRouter()
 
 class Report(BaseModel):
@@ -26,11 +27,10 @@ class Report(BaseModel):
     strandhog: bool = False
     oauth: bool = False
 
-
 class ReportList(BaseModel):
     formData: List[Report] 
 
-
+# Logic
 @router.post("/report")
 async def submit_report(report_request: ReportList):
     reports = report_request.formData 
@@ -73,7 +73,6 @@ async def submit_report(report_request: ReportList):
                     messages.extend("Info: Only one scan can be selected at a time")
                 elif not strandhog and not oauth:
                     messages.extend("Info: No scan selected")
-                    
 
         # Return collected messages
         if messages:

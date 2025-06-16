@@ -1,7 +1,7 @@
 # External imports
+from typing import Generic, Optional
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, TypeVar, Generic
-from enum import Enum
+from typing import Optional, TypeVar, Dict, Any
 
 # Internal imports
 from app.interface.logger import setup_logger
@@ -15,21 +15,8 @@ T = TypeVar(
     "T"
 )  # This defines a type variable T — a placeholder for any Pydantic model (like User, Program, Product, etc.)
 
+
 # Logic
-
-
-class DetailedStatus(BaseModel):
-    active: int = Field(..., example=10)
-    stopped: int = Field(..., example=13)
-
-class DataCount__Response(BaseModel):
-    count: int = Field(
-        ..., example=69, description="Shows the count of the requsted data in database"
-    )
-    details: Optional[DetailedStatus] = Field(
-        default=None,
-        description="Optional detailed breakdown of process statuses"
-    )
 
 
 # ---
@@ -42,7 +29,7 @@ class Generic__Response(BaseModel, Generic[T]):
     )
     message: str = Field(
         ...,
-        example="Data successfully fetched",
+        example="Program inserted successfully",
         description="Brief message about the response",
     )
     data: Optional[T] = None

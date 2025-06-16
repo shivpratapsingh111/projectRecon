@@ -1,20 +1,15 @@
-# External Imports
+# External imports
 import traceback
 
-# Local Imports
-from app.services.monitor_endpoints.db.db_manager import DatabaseManager
-from app.db.db_operations import DatabaseOperations
-from app.logger.logger import setup_logger
-from app.config.db_config import db_config
+# Internal imports
+from app.interface.database_manager import db_ops
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Intialization
 logger = setup_logger(
-    __name__, log_file_path="api_insert", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
-
 
 # Logic
 async def insert_program(program_data):

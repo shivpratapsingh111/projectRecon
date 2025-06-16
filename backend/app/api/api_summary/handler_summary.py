@@ -1,22 +1,18 @@
-# External Imports
+# External imports
 import traceback
 from typing import Literal
 from fastapi import APIRouter, Query, status
 
-# Local Imports
-from app.config.db_config import db_config
-from app.db.db_manager import DatabaseManager
-from app.db.db_operations import DatabaseOperations
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.database_manager import db_ops
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from .data_model_summary import Generic__Response, DataCount__Response
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_summary", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
 
 router = APIRouter()
 

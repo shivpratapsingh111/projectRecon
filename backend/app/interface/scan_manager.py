@@ -1,22 +1,23 @@
-from concurrent.futures import ThreadPoolExecutor
-from app.config.config  import *
+# External imports
+import os
+
+# Internal imports
+from app.services.scans.js import start_js_scan
 from app.services.scans.urls import start_urls_scan
 from app.services.scans.subdomains import start_subdomains_scan
 from app.services.scans.nuclei import start_nuclei_scan
-from app.services.scans.js import start_js_scan
-import os
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
+from app.config.config import LOG_LEVEL_DEBUG, ROOT_DATA_DIR
+from app.interface.database_manager import db_ops
 from app.interface.json_data_manager import ProgramManager
-from app.config.db_config  import db_config
-from app.db.db_operations import DatabaseOperations
-from app.db.db_manager import DatabaseManager
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
 
+# Initialization
+logger = setup_logger(
+    __name__, log_file_path="interface", enable_debug=LOG_LEVEL_DEBUG
+)
 program_manager = ProgramManager()
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
 
-
+# Logic
 def start_scan(program_name, domain_list, execution_style, scan_config):
     """
         - Make scan directory
@@ -42,6 +43,8 @@ def start_scan(program_name, domain_list, execution_style, scan_config):
     logger.debug(f"Written domains to file: {targets_file}")
 
     run_scans(program_name, domain_list, execution_style, scan_config)
+
+# ---
 
 def check_and_insert_program_and_target(program_name, domain_list):
     
@@ -74,6 +77,8 @@ def check_and_insert_program_and_target(program_name, domain_list):
     
     logger.debug(f"All Targets inserted in DB with IDs {target_uuid_list}")
     return program_uuid, target_uuid_list
+
+# ---
 
 def run_scans(program_name, domain_list, execution_style, scan_config):
     """

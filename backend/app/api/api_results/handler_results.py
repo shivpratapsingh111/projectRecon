@@ -1,5 +1,5 @@
-# External Imports
-import asyncio, json
+# External imports
+import asyncio, json, traceback
 from fastapi import (
     APIRouter,
     WebSocket,
@@ -8,11 +8,10 @@ from fastapi import (
     Path as FPath,
     status,
 )
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from typing import Optional
-import traceback
 
-# Local Imports
+# Internal imports
 from app.api.api_results.read_results import websocket_read_results
 from app.api.api_results.read_results import http_read_results
 from app.api.api_results.read_results import get_log_file_content
@@ -29,12 +28,12 @@ from .data_model_results import (
     DownloadProgramScanResults__Response,
     DownloadLogFile__Response,
 )
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_results", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
 router = APIRouter()
 

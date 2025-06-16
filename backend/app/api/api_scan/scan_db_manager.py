@@ -1,18 +1,13 @@
-# External Imports
+# External imports
 import traceback
 
-# Local Imports
-from app.config.db_config import db_config
-from app.services.scans.db.db_manager import DatabaseManager
-from app.services.scans.db.db_operations import DatabaseOperations
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
+from app.interface.database_manager import db_ops
 
 # Initialization
-logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
-
+logger = setup_logger(__name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG)
 
 # Logic
 async def get_existing_program_names():

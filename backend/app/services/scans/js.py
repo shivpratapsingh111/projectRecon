@@ -1,11 +1,23 @@
-import datetime, time, subprocess
-from app.config.config  import *
+# External imports 
+import os
+# Internal imports
 from app.interface.process_manager import run_commands
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
+from app.interface.logger import setup_logger
+from app.config.config import (
+	ROOT_DATA_DIR, 
+	LOG_LEVEL_DEBUG,
+    extracted_paths,
+    extracted_urls,
+    sensitive_data,
+    nuclei_file,
+    js_urls,
+)
+logger = setup_logger(__name__, log_file_path='service', enable_debug = LOG_LEVEL_DEBUG)
 
+# Initialization
 program_results = {}
 
+# Logic
 # DO NOT REMOVE PARAMETER: `execution_style`
 def start_js_scan(program_name, domain_list, execution_style, nuclei_enum, program_uuid, target_uuid_list):
     # Store results for each domain

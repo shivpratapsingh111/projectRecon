@@ -1,4 +1,4 @@
-db_config = {
+DB_CONFIG = {
     'dbname': 'main_db_test',
     'user': 'postgres',
     'password': 'postgres',

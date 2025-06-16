@@ -1,14 +1,15 @@
-# data_manager.py
-import json
-import os
-from datetime import datetime
+# External imports
+import json, os
 from filelock import FileLock, Timeout
-
 from typing import Dict, Any, Optional
-from app.logger.logger import setup_logger
-logger = setup_logger(__name__, log_file_path='scan', enable_debug = True)
-from app.config.config import PROGRAMS_DATA_FILE
 
+# Internal imports
+from app.interface.logger import setup_logger
+from app.config.config import LOG_LEVEL_DEBUG
+from app.config.config import PROGRAMS_DATA_FILE
+logger = setup_logger(__name__, log_file_path='interface', enable_debug = LOG_LEVEL_DEBUG)
+
+# Logic
 class ProgramManagementError(Exception):
     """Custom exception for program management operations."""
     pass

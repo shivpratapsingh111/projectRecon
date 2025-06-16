@@ -1,13 +1,10 @@
-# External Imports
-import aiofiles
-import asyncio
-import json
-import traceback
+# External imports
+import traceback, json, aiofiles, asyncio
 from fastapi import status
 from typing import Optional
 from pathlib import Path
 
-# Local Imports
+# Internal imports
 from app.interface.process_manager import CommandExecutor
 from app.config.config import (
     LOG_LEVEL_DEBUG,
@@ -24,10 +21,10 @@ from app.config.config import (
     sensitive_data,
     sensitive_keywords
     )
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
 
 # Initialization
-logger = setup_logger(__name__, log_file_path="api_results", enable_debug=LOG_LEVEL_DEBUG)
+logger = setup_logger(__name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG)
 manager = CommandExecutor()
 
 # Logic
@@ -83,12 +80,11 @@ async def get_log_file_content(pid, log_type):
 
 async def read_file(file_path: Path, limit: Optional[int] = None, offset: int = 0) -> dict:
     if not file_path.exists():
-        logger.error(f"File not found: {file_path}")
+        logger.warning(f"File not found: {file_path}")
         return {
                 "status_code": status.HTTP_404_NOT_FOUND,
                 "status": False,
                 "message": "File not found",
-                
             }
     if limit is not None and (not isinstance(limit, int) or limit < 0):
         return {

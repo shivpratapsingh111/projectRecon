@@ -1,13 +1,9 @@
-# External Imports
-import os
-import traceback
-import zipfile
-import threading
-import asyncio
+# External imports
+import asyncio, threading, zipfile, os, traceback
 from typing import Dict, Any
 from fastapi import status
 
-# Local Imports
+# Internal imports
 from app.interface.process_manager import CommandExecutor
 from app.config.config import (
     LOG_LEVEL_DEBUG,
@@ -24,11 +20,11 @@ from app.config.config import (
     sensitive_data,
     sensitive_keywords,
 )
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_results", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
 manager = CommandExecutor()
 

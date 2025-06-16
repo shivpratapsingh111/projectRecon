@@ -78,9 +78,9 @@ class QueryManager:
     # --- Endpoint Monitor ---
     INSERT_ENDPOINT = """
         INSERT INTO monitor_endpoints (
-            program_uuid, target_id, scan_name, scan_interval, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
+            program_uuid, target_id, scan_name, status, url, old_status_code, new_status_code, old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
     """
 
     # --- Report ---
@@ -117,6 +117,9 @@ class QueryManager:
 # Select queries
 
     # --- Endpoint Monitor ---
+    SELECT_ALL_PROGRAMNAMES = """
+        SELECT program_name FROM programs 
+    """
     SELECT_ENDPOINT_DATA_BY_URL = """
         SELECT id, program_uuid, target_id, scan_name, url, old_status_code, new_status_code,
             old_response_size, new_response_size, old_body_hash, new_body_hash, old_body_file_path, new_body_file_path, change_detected_at, need_review, last_check
@@ -129,6 +132,12 @@ class QueryManager:
     """
     SELECT_ALL_ENDPOINTS = """
         SELECT id, program_uuid, scan_name, url FROM monitor_endpoints
+    """
+    SELECT_ALL_PROGRAMS = """
+        SELECT * FROM programs
+    """
+    SELECT_ALL_SCANNAMES = """
+        SELECT scan_name FROM monitor_endpoints 
     """
     GET_NEED_REVIEW_ENDPOINTS = """
         SELECT
@@ -182,7 +191,7 @@ class QueryManager:
         FROM programs
         WHERE id = %s
     """
-    GET_program_uuid = """
+    GET_PROGRAM_UUID = """
         SELECT 
             id
         FROM programs
@@ -267,21 +276,31 @@ class QueryManager:
             change_detected_at = %s,
             need_review = %s,
             last_check = CURRENT_TIMESTAMP
-        WHERE id = %s;
+        WHERE id = %s
     """
     UPDATE_ENDPOINT_TIMESTAMP = """
         UPDATE monitor_endpoints
             SET last_check = CURRENT_TIMESTAMP
-            WHERE id = %s;
+            WHERE id = %s
     """
-
     UPDATE_NEED_REVIEW_ENDPOINT = """
         UPDATE monitor_endpoints
             SET need_review = FALSE
-        WHERE id = %s;
+        WHERE id = %s
     """
-    # --- Web Target ---
+    UPDATE_ENDPOINT_STATUS = """
+        UPDATE monitor_endpoints
+            SET status = %s
+        WHERE id = %s
+    """
+    UPDATE_ENDPOINT_SCAN_INTERVAL = """
+        UPDATE monitor_endpoints
+            SET scan_interval = %s
+        WHERE id = %s
+    """
 
+
+    # --- Web Target ---
     UPDATE_WEB_TARGETS_DATA = """
         UPDATE web_targets SET
             technology = %s,
@@ -294,6 +313,8 @@ class QueryManager:
             webserver = %s
         WHERE target_domain = %s;
     """
+
+
     # --- Report ---
     UPDATE_MOBILE_TARGET_DATA = """
     UPDATE mobile_targets

@@ -1,13 +1,10 @@
-# This will take program directory and it's json data file and insert all the subdomains and respective programs in DB
-
-import os
-import json
-import uuid
-import argparse
-import psycopg2
+# External import
+import psycopg2, argparse, os, json
 from psycopg2 import sql
-from typing import List, Dict, Optional
+from typing import Dict
 
+# This will take program directory and it's json data file and insert all the subdomains and respective programs in DB
+# Logic
 class DatabaseImporter:
     def __init__(self, db_name: str, host: str = 'localhost', port: int = 5432, 
                  user: str = 'postgres', password: str = ''):
@@ -94,7 +91,9 @@ class DatabaseImporter:
             last_check TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
-    
+
+# ---
+
     def check_db_exists(self) -> bool:
         """
         Check if the database already exists
@@ -122,7 +121,9 @@ class DatabaseImporter:
         except Exception as e:
             print(f"Error checking database existence: {e}")
             return False
-    
+
+# ---
+
     def create_database_and_tables(self, db_exits):
         """
         Create database and initialize tables
@@ -172,7 +173,9 @@ class DatabaseImporter:
             print(f"Database {self.db_name} created successfully with tables.")
         except Exception as e:
             print(f"Error creating database and tables: {e}")
-    
+
+# ---
+
     def parse_httpx_subdomains(self, httpx_file: str) -> Dict[str, Dict]:
         """
         Parse JSONL file with subdomain information
@@ -207,7 +210,8 @@ class DatabaseImporter:
                     print(f"Error decoding JSON line: {line}")
         
         return subdomain_details
-    
+
+# ---
 
     def get_program_uuid(self, json_file_name, program_name):
         """
@@ -221,6 +225,8 @@ class DatabaseImporter:
                 if program_details.get("program_name") == program_name:
                     return program_uuid
         return None 
+
+# ---
 
     def get_target_uuid(self, json_file_name, program_uuid, domain_name):
         """
@@ -239,6 +245,7 @@ class DatabaseImporter:
 
         return None 
 
+# ---
 
     def import_directory_data(self, directory_path: str, json_file_name: str):
         """
@@ -338,7 +345,9 @@ class DatabaseImporter:
         
         except Exception as e:
             print(f"Error importing directory data: {e}")
-    
+
+# ---
+
     def run_import(self, directory_path: str, json_file_name: str):
         """
         Main method to run database import process
@@ -355,6 +364,8 @@ class DatabaseImporter:
         
         # Import data
         self.import_directory_data(directory_path, json_file_name)
+
+# ---
 
 def main():
     # Set up the argument parser
@@ -376,6 +387,8 @@ def main():
     
     # Run the import process with the provided arguments
     importer.run_import(directory_path, json_file_name)
+
+# ---
 
 # Entry point for the script
 if __name__ == "__main__":

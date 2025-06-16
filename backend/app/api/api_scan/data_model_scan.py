@@ -1,13 +1,13 @@
-# External Imports
+# External imports
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Dict, Any, TypeVar, Generic
 
-# Local Imports
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Intialization
-logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
+logger = setup_logger(__name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG)
 T = TypeVar(
     "T"
 )  # This defines a type variable T — a placeholder for any Pydantic model (like User, Program, Product, etc.)

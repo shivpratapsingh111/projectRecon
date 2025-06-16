@@ -1,26 +1,19 @@
-from app.config.config  import *
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from typing import List, Optional
-from pydantic import BaseModel
-import uvicorn
-from fastapi import APIRouter
+# External imports
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.db.db_manager import DatabaseManager
+# Internal imports
 from app.api.api_mail_reports import handler_report
 from app.api.api_insert import handler_insert
 from app.api.api_monitor_endpoints import handler_monitor
 from app.api.api_results import handler_results
 from app.api.api_summary import handler_summary
-
-from app.config.db_config import db_config
+from app.api.api_checks import handler_checks
 from app.api.api_scan import handler_scan
 
-db_manager = DatabaseManager(db_config) # Just to create DB and tables, if doesn't exists
-
+# Initialization
 app = FastAPI()
 router = APIRouter()
-
 # Allow all origins (for development purposes)
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +24,7 @@ app.add_middleware(
 )
 
 
+# Logic
 @app.get("/", tags=["root"])
 async def root():
     """Root endpoint to check service status."""
@@ -41,6 +35,15 @@ async def root():
 app.include_router(handler_scan.router, prefix="/scan", tags=["Start New Scan"])
 app.include_router(handler_insert.router, prefix="/insert", tags=["Insert New Targets"])
 app.include_router(handler_report.router, tags=["Report With Automation"])
-app.include_router(handler_monitor.router, prefix="/monitor", tags=["Monitor Endpoints"])
-app.include_router(handler_results.router, prefix="/results", tags=["Get Results Of Preivous Scans"])
-app.include_router(handler_summary.router, prefix="/summary", tags=["Get Summary (total subdomains, etc) From Database"])
+app.include_router(
+    handler_monitor.router, prefix="/monitor", tags=["Monitor Endpoints"]
+)
+app.include_router(
+    handler_results.router, prefix="/results", tags=["Get Results Of Preivous Scans"]
+)
+app.include_router(
+    handler_summary.router,
+    prefix="/summary",
+    tags=["Get Summary (total subdomains, etc) From Database"],
+)
+app.include_router(handler_checks.router, prefix="/check", tags=["Run Checks"])

@@ -1,14 +1,14 @@
-# External Imports
+# External imports
 import asyncio
 from fastapi import status
 
-# Local Imports
+# Internal imports
 from app.interface.scan_manager import start_scan
-from app.logger.logger import setup_logger
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization
-logger = setup_logger(__name__, log_file_path="api_scan", enable_debug=LOG_LEVEL_DEBUG)
+logger = setup_logger(__name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG)
 
 
 # Logic

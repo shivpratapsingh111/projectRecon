@@ -1,11 +1,11 @@
-# External Imports
+# External imports
 from fastapi import APIRouter, UploadFile, Form, status
 from fastapi.responses import JSONResponse
 from typing import Literal, Optional
 import asyncio, traceback
 
-# Local Imports
-from app.logger.logger import setup_logger
+# Internal imports
+from app.interface.logger import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from app.api.api_monitor_endpoints.endpoint_db_manager import (
     insert_new_endpoints,
@@ -35,7 +35,7 @@ from .data_model_monitor import (
 
 # Initialization
 logger = setup_logger(
-    __name__, log_file_path="api_monitor_endpoints", enable_debug=LOG_LEVEL_DEBUG
+    __name__, log_file_path="api", enable_debug=LOG_LEVEL_DEBUG
 )
 router = APIRouter()
 
@@ -304,6 +304,8 @@ async def get_endpoints(state: Literal["active", "stopped"]):
 
 
 # ---
+
+
 @router.get(
     "/review-endpoints/response-body-changes/{endpoint_id}",
     response_model=Generic__Response[GetResponseBodyChanges__Response],

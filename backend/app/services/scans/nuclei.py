@@ -1,17 +1,21 @@
-import datetime, time, subprocess
-from app.config.config  import *
+# External imports
+import os
+
+# Internal imports
 from app.interface.process_manager import run_commands
-from app.logger.logger import setup_logger
-from app.db.db_manager import DatabaseManager
-from app.db.db_operations import DatabaseOperations
-from app.config.db_config  import db_config
-db_manager = DatabaseManager(db_config)
-db_ops = DatabaseOperations(db_manager)
+from app.interface.logger import setup_logger
+from app.config.config import (
+	ROOT_DATA_DIR,
+    LOG_LEVEL_DEBUG,
+    nuclei_file,
+    subdomains_file,
+)
 
-logger = setup_logger(__name__, log_file_path='web_scan', enable_debug = True)
-
+# Initialization
+logger = setup_logger(__name__, log_file_path='service', enable_debug = LOG_LEVEL_DEBUG)
 program_results = {}
 
+# Logic
 # DO NOT REMOVE PARAMETER: `execution_style`
 def start_nuclei_scan(program_name, domain_list, execution_style, nuclei_enum, program_uuid, target_uuid_list):
     # Store results for each domain
