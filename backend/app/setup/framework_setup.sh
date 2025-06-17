@@ -201,7 +201,7 @@ fi
 # Notify
 echo "Project Recon Setup Completed"
 
-bash setup.sh
+bash tool_setup.sh
 
 # Making Desktop entry
 mkdir -p "$(dirname "$DESKTOP_FILE")"
@@ -210,8 +210,8 @@ cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=ProjectRecon
 Comment=Launch ProjectRecon Framework
-Exec=$BACKEND_DIR/terminal.py
-Icon=$BACKEND_DIR/icon.png
+Exec=$BACKEND_DIR/start.py
+Icon=$BACKEND_DIR/backend/app/setup/icon.png
 Type=Application
 Categories=Utility;
 EOF
