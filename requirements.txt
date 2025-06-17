@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+asyncio
+aiohttp
+psycopg2-binary
+pydantic
+typing
+psutil
+requests
+urllib3==1.26.6
+python-multipart
+pydantic[email]
+filelock
+pytz
+websockets
+wsproto
