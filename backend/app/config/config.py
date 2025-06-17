@@ -2,8 +2,8 @@ import os
 
 #===========================[GLOBAL CONFIG]
 
-TELEGRAM_WEBHOOK = 
-TELEGRAM_CHAT_ID = 
+TELEGRAM_WEBHOOK = os.environ.get("TELEGRAM_WEBHOOK")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 ROOT_DATA_DIR = "~/projectRecon-Data-Test/"
 ROOT_DATA_DIR = os.path.expanduser(ROOT_DATA_DIR).rstrip('/') # Getting Absolute path

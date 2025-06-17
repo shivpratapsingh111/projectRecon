@@ -2,17 +2,18 @@
 import threading, requests, logging, os
 
 # Internal imports
-from app.config.config import LOGS_DIR
+from app.config.config import LOGS_DIR, TELEGRAM_WEBHOOK, TELEGRAM_CHAT_ID
 
 # Initialization
 
 # Your existing function to send telegram messages
 def send_telegram_message(message: str):
-    url = 
+    url = TELEGRAM_WEBHOOK
     payload = {
-        ,
+        'chat_id': f'{TELEGRAM_CHAT_ID}',
         'text': message
     }
+
 
     try:
         response = requests.post(url, data=payload, timeout=5)
