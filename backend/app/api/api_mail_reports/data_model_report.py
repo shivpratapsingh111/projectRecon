@@ -68,12 +68,12 @@ class Report__Request(BaseModel):
     )
     strandhog: Optional[bool] = Field(
         default=None,
-        example="True",
+        example=True,
         description="True if reporting this vulnerability, otherwise False",
     )
     oauth: Optional[bool] = Field(
         default=None,
-        example="True",
+        example=True,
         description="True if reporting this vulnerability, otherwise False",
     )
 

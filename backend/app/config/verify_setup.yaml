@@ -1,0 +1,80 @@
+os:
+  common:
+    packages:
+      - git
+      - npm
+      - tmux
+      - python
+      - python-pip
+      - gcc
+      - postgresql
+      - curl
+  debian:
+    packages:
+      - python3-dev 
+      - libpq-dev 
+      - postgresql-contrib
+  fedora:
+    packages:
+      - python3-devel
+      - libpq-devel
+      - postgresql-server 
+  arch:
+    packages:
+      - libpq
+
+tools:
+  custom_setup:
+    - Sublist3r
+  others:
+    - assetfinder
+    - gf
+    - bbot
+    - getjs
+    - github-subdomains
+    - gitlab-subdomains
+    - cero
+    - yass
+    - dnsresolver
+    - jsluice
+    - unfurl
+    - hakrawler
+    - ffuf
+    - subjs
+    - massdns
+    - fetcher
+    - subfinder
+    - amass
+    - subdominator
+    - haktrails
+    - waymore
+    - katana
+    - gau
+    - waybackurls
+    - nuclei
+    - kxss
+    - qsreplace
+    - dirsearch
+    - httpx
+    - dnsgen
+    - altdns
+    - alterx
+    - puredns
+
+env_vars:
+  - GH_TOKEN
+  - GT_TOKEN
+
+postgres:
+  user: postgres
+  password: postgres
+  hba_paths:
+    apt: "/etc/postgresql/{version}/main/pg_hba.conf"
+    dnf: "/var/lib/pgsql/data/pg_hba.conf"
+    pacman: "/var/lib/postgres/data/pg_hba.conf"
+
+github_repos:
+  - name: projectrecon
+    url: https://api.github.com/repos/shivpratapsingh111/projectrecon
+  - name: pentest-dashboard
+    url: https://api.github.com/repos/shivpratapsingh111/pentest-dashboard

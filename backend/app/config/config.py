@@ -1,12 +1,14 @@
 import os
+from pathlib import Path
+
 
 #===========================[GLOBAL CONFIG]
 
 TELEGRAM_WEBHOOK = os.environ.get("TELEGRAM_WEBHOOK")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-ROOT_DATA_DIR = "~/projectRecon-Data-Test/"
-ROOT_DATA_DIR = os.path.expanduser(ROOT_DATA_DIR).rstrip('/') # Getting Absolute path
+ROOT_DATA_DIR = "~/projectrecon_data/"
+ROOT_DATA_DIR = os.path.expanduser(ROOT_DATA_DIR).rstrip('/')
 LOGS_DIR = f"{ROOT_DATA_DIR}/logs"
 CENTRAL_LOG_FILE = "logs.txt"
 
@@ -17,6 +19,30 @@ PROGRAMS_DATA_FILE = f"{ROOT_DATA_DIR}/data_file.json"
 MONITOR_SCANS_PERIOD = 7200  # 2 hours interval
 
 LOG_LEVEL_DEBUG = True
+
+# DEV_MODE = os.getenv("DEV_MODE") == "1"
+DEV_MODE = 1
+
+if DEV_MODE:
+    ROOT_DATA_DIR = "~/projectRecon-Data-Test"
+    ROOT_DATA_DIR = os.path.expanduser(ROOT_DATA_DIR).rstrip('/')
+    TOOLS_DIR = Path.home() / "tools"
+    FRAMEWORK_DIR = Path.home() / "vsCode"
+    BACKEND_DIR = f"{FRAMEWORK_DIR}/projectrecon"
+    FRONTEND_DIR = f"{FRAMEWORK_DIR}/pentest-dashboard"
+    PYTHON_ENV = ".dev_projectrecon_env"
+    FRAMEWORK_SETUP_CONFIG = Path.home().joinpath(
+        "vsCode", "projectrecon", "backend", "app", "config", "verify_setup.yaml"
+    )
+else:
+    TOOLS_DIR = Path.home() / "tools"
+    FRAMEWORK_DIR = Path.home() / "projectrecon"
+    BACKEND_DIR = f"{FRAMEWORK_DIR}/projectrecon"
+    FRONTEND_DIR = f"{FRAMEWORK_DIR}/pentest-dashboard"
+    PYTHON_ENV = ".projectrecon_env"
+    FRAMEWORK_SETUP_CONFIG = Path.home().joinpath(
+        "projectrecon", "projectrecon", "backend", "app", "config", "verify_setup.yaml"
+    )
 
 #===========================[Files For Subdomain Enumeration]
 
@@ -83,5 +109,3 @@ nuclei_file='nuclei.txt'
 xssResults='xss.txt'
 openredirectResults='openRedirects.txt' 
 ssrfResults='ssrfUrls.txt'
-
-

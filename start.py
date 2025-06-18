@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # External imports
-import webbrowser, time, threading
+import webbrowser, time, os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio, subprocess, signal, sys, uvicorn
 from uvicorn import Config, Server
+
+# Internal imports
+from backend.app.config.config import BACKEND_DIR, FRONTEND_DIR
 
 # Initalization
 app = FastAPI()
@@ -112,7 +115,7 @@ if __name__ == "__main__":
             "send-keys",
             "-t",
             BACKEND_SESSION,
-            "cd ~/vsCode/projectRecon/backend/ && uvicorn main:app --host 0.0.0.0 --port 8000",
+            f"cd {BACKEND_DIR}/backend/ && uvicorn main:app --host 0.0.0.0 --port 8000",
             "C-m",
         ]
     )
@@ -122,13 +125,13 @@ if __name__ == "__main__":
             "send-keys",
             "-t",
             FRONTEND_SESSION,
-            "cd ~/vsCode/pentest-dashboard/ && npm run dev",
+            f"cd {FRONTEND_DIR} && npm run dev",
             "C-m",
         ]
     )
 
 
-    threading.Thread(target=open_browser_later, daemon=True).start()
+    # threading.Thread(target=open_browser_later, daemon=True).start()
     
     config = Config(app=app, host="0.0.0.0", port=8002, log_level="info")
     server = Server(config)

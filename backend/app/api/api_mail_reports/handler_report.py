@@ -1,86 +1,97 @@
 # External imports
-from typing import List, Optional
-from pydantic import BaseModel
-from fastapi import APIRouter
+import traceback
+from fastapi import APIRouter, status
+from fastapi.responses import JSONResponse
+from typing import List
 
 # Internal imports
 from app.config.config  import LOG_LEVEL_DEBUG
 from app.services.mail_reports.report import send_report
 from app.interface.logger import setup_logger
+from .data_model_report import Generic__Response, ReportList__Request, Report__Response
 
 # Initialization
 logger = setup_logger(__name__, log_file_path='api', enable_debug = LOG_LEVEL_DEBUG)
 router = APIRouter()
 
-class Report(BaseModel):
-    program_name: str
-    program_url: str
-    target_package: str
-    target_apk: str
-    technology: List[str]
-    download_url: Optional[str]
-    email: str
-    attachment_url: Optional[str]
-    report_form: Optional[str]
-    poc_path: Optional[str]
-    acquisitions: List[str]
-    strandhog: bool = False
-    oauth: bool = False
-
-class ReportList(BaseModel):
-    formData: List[Report] 
+# NOT IMPLETEMENTED PROPERLY
 
 # Logic
 @router.post("/report")
-async def submit_report(report_request: ReportList):
-    reports = report_request.formData 
-    messages = []
-        
-    try:
-        logger.info(f"Number of programs provided: {len(reports)}")
-        invalid_reports = [
-            report.program_name
-            for report in reports
-            if (report.strandhog and report.oauth) or (not report.strandhog and not report.oauth)
-        ]
-        if invalid_reports:
-            return {"messages": f"Error: Please select one scan at a time for: {', '.join(invalid_reports)}"}
-        
-        if isinstance(reports, list) and len(reports) > 1:
-            
-            # Collect program_names, which dont either have selected both or none scans
-            try:
-                for report in reports:
-                    strandhog = report.strandhog
-                    oauth = report.oauth
-                    if strandhog and not oauth:
-                        messages.extend(send_report(report.model_dump(), "Strandhog"))
-                    elif not strandhog and oauth:
-                        messages.extend(send_report(report.model_dump(), "OAuth"))
-                    # messages.extend("Success: Emails Sent!")
-            except Exception as e:
-                messages.extend(logger.exception("Error: Something went wrong"))
-                    
-        else:
-            for report in reports:
-                strandhog = report.strandhog
-                oauth = report.oauth
-                if strandhog and not oauth:
-                    messages.extend(send_report(report.model_dump(), "Strandhog"))
-                elif not strandhog and oauth:
-                    messages.extend(send_report(report.model_dump(), "OAuth"))
-                elif strandhog and oauth:
-                    messages.extend("Info: Only one scan can be selected at a time")
-                elif not strandhog and not oauth:
-                    messages.extend("Info: No scan selected")
+async def submit_report(report_request: ReportList__Request):
+    return JSONResponse(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        content={
+            "status": False,
+            "message": "NOT IMPLEMENTED PROPERLY",
+        },
+    )
+    # reports = report_request.formData
+    # messages = []
 
-        # Return collected messages
-        if messages:
-            return {"messages": messages}
+    # try:
+    #     logger.info(f"Number of programs provided: {len(reports)}")
+    #     invalid_reports = [
+    #         report.program_name
+    #         for report in reports
+    #         if (report.strandhog and report.oauth)
+    #         or (not report.strandhog and not report.oauth)
+    #     ]
+    #     # if invalid_reports:
+    #     #     return {
+    #     #         "messages": f"Error: Please select one scan at a time for: {', '.join(invalid_reports)}"
+    #     #     }
 
-        return {"message": "Error: Something went wrong"}
+    #     if isinstance(reports, list) and len(reports) > 1:
 
-    except Exception as e:
-        logger.exception("Error: Unable to process reports")
-        return {"message": "Error: Unable to process reports", "error": str(e)}
+    #         # Collect program_names, which dont either have selected both or none scans
+    #         try:
+    #             for report in reports:
+    #                 strandhog = report.strandhog
+    #                 oauth = report.oauth
+    #                 if strandhog and not oauth:
+    #                     messages.append(send_report(report.model_dump(), "Strandhog"))
+    #                 elif not strandhog and oauth:
+    #                     messages.append(send_report(report.model_dump(), "OAuth"))
+    #                 # messages.append("Success: Emails Sent!")
+    #         except Exception as e:
+    #             logger.exception("Error: Something went wrong")
+    #             messages.append("Error: Something went wrong")
 
+    #     else:
+    #         for report in reports:
+    #             strandhog = report.strandhog
+    #             oauth = report.oauth
+    #             if strandhog and not oauth:
+    #                 messages.append(send_report(report.model_dump(), "Strandhog"))
+    #             elif not strandhog and oauth:
+    #                 messages.append(send_report(report.model_dump(), "OAuth"))
+    #             elif strandhog and oauth:
+    #                 messages.append("Info: Only one scan can be selected at a time")
+    #             elif not strandhog and not oauth:
+    #                 messages.append("Info: No scan selected")
+
+    #     # Return collected messages
+    #     if messages:
+    #         return Generic__Response[Report__Response](
+    #             status=True,
+    #             message="Report(s) processed",
+    #             data=Report__Response(message=messages),
+    #         )
+
+    #     return Generic__Response[List[str]](
+    #         status=False,
+    #         message="Something went wrong",
+    #     )
+
+    # except Exception as e:
+    #     full_trace = traceback.format_exc()
+    #     logger.error(f"Error at api handler level: {e} \n {full_trace}")
+    #     return JSONResponse(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         content={
+    #             "status": False,
+    #             "message": "Error at api handler level",
+    #             "debug": {"error": str(e), "traceback": full_trace},
+    #         },
+    #     )

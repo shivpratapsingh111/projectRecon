@@ -159,7 +159,7 @@ class EndpointByStatusEntry(BaseModel):
         None, example="3600", description="Interval between scans in seconds"
     )
     status: Optional[str] = Field(
-        None, example="true", description="Should it be scanned (true) or not (false)"
+        None, example=True, description="Should it be scanned (true) or not (false)"
     )
     url: Optional[str] = Field(
         None, example="https://google.com/file.txt", description="Endpoint url"

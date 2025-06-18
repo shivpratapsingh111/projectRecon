@@ -4,8 +4,9 @@ BACKEND_DIR="$HOME/projectrecon/projectrecon"
 FRONTEND_DIR="$HOME/projectrecon/pentest-dashboard"
 PSQL_USER="postgres_pr"
 PSQL_PASSWORD="psqlnotsafe123"
+PSQL_DB="project_recon"
 DESKTOP_FILE="$HOME/.local/share/applications/projectrecon.desktop"
-
+PYTHON_ENV=".projectrecon_env"
 
 # Update and install system requirements
 if command -v apt &> /dev/null; then
@@ -41,8 +42,8 @@ fi
 
 
 # Activate python environment
-python3 -m venv python_environment
-source ~/python_environment/bin/activate
+python3 -m venv "$PYTHON_ENV"
+source ~/"$PYTHON_ENV"/bin/activate
 
 # Clone github repo for both frontend and backend
 echo "[+] Cloning repositories..."
@@ -67,7 +68,7 @@ pip3 install -r requirements.txt
 echo "[+] Starting PostgreSQL service..."
 sudo systemctl enable postgresql
 sudo systemctl start postgresql
-echo "[+] Creating PostgreSQL user 'postgres' with password..."
+echo "[+] Creating PostgreSQL user "$PSQL_USER" with password..."
 sudo -u postgres psql -c "CREATE USER "$PSQL_USER" WITH SUPERUSER PASSWORD "$PSQL_PASSWORD";"
 echo "[+] Configuring PostgreSQL to allow remote password authentication..."
 
@@ -134,7 +135,7 @@ alias tls='tmux list-sessions'
 
 # Project environment
 export PYTHONPATH="\$PYTHONPATH:\$BACKEND_DIR"
-source \$HOME/python_environment/bin/activate
+source \$HOME/projectrecon_env/bin/activate
 
 EOF
 
@@ -148,9 +149,9 @@ EOF
 # Setup DB config for backend
 cat << EOF > "$BACKEND_DIR/backend/app/config/db_config.py"
 DB_CONFIG = {
-    'dbname': 'test_monitor',
-    'user': 'postgres_pr',
-    'password': 'psqlnotsafe123',
+    'dbname': '$PSQL_DB',
+    'user': '$PSQL_USER',
+    'password': '$PSQL_PASSWORD',
     'host': 'localhost'
 }
 EOF
@@ -173,7 +174,7 @@ alias tls='tmux list-sessions'
 
 # Project environment
 export PYTHONPATH="\$PYTHONPATH:\$BACKEND_DIR"
-source \$HOME/python_environment/bin/activate
+source \$HOME/projectrecon_env/bin/activate
 
 EOF
 
@@ -187,7 +188,7 @@ EOF
 # Setup DB config for backend
 cat << EOF > "$BACKEND_DIR/backend/app/config/db_config.py"
 DB_CONFIG = {
-    'dbname': 'test_monitor',
+    'dbname': '$PSQL_DB',
     'user': '$PSQL_USER',
     'password': '$PSQL_PASSWORD',
     'host': 'localhost'

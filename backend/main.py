@@ -8,7 +8,7 @@ from app.api.api_insert import handler_insert
 from app.api.api_monitor_endpoints import handler_monitor
 from app.api.api_results import handler_results
 from app.api.api_summary import handler_summary
-from app.api.api_checks import handler_checks
+from app.api.api_verify import handler_verify
 from app.api.api_scan import handler_scan
 
 # Initialization
@@ -46,4 +46,4 @@ app.include_router(
     prefix="/summary",
     tags=["Get Summary (total subdomains, etc) From Database"],
 )
-app.include_router(handler_checks.router, prefix="/check", tags=["Run Checks"])
+app.include_router(handler_verify.router, prefix="/verify", tags=["Run Checks"])

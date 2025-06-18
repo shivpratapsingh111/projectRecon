@@ -443,7 +443,7 @@ fi
 
 # activate python env if not activated
 
-VENV_PATH=~/python_environment
+VENV_PATH=~/projectrecon_env
 ACTIVATE_SCRIPT="$VENV_PATH/bin/activate"
 
 # Check if the virtual environment exists
