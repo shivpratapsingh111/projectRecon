@@ -267,7 +267,7 @@ updateUpgrade() {
 
         sudo apt install -y curl build-essential
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        source $HOME/.cargo/env
+        source "$REAL_HOME"/.cargo/env
 
 
         # apt install -y python3-pip && echo "[+] Python Installed" || echo "[+] Python Not Installed" | tee -a log.txt
@@ -329,7 +329,7 @@ updateUpgrade() {
 
         sudo dnf install -y curl make gcc
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-        source $HOME/.cargo/env
+        source "$REAL_HOME"/.cargo/env
 
 
         for utility in ${commonUtilties[@]}; do
@@ -377,7 +377,7 @@ updateUpgrade() {
 
         sudo pacman -S --needed curl base-devel
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-        source $HOME/.cargo/env
+        source "$REAL_HOME"/.cargo/env
 
 
         for utility in ${commonUtilties[@]}; do
