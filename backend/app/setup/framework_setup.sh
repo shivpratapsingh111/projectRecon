@@ -1,12 +1,29 @@
 # Initialization
-MAIN_DIR="$HOME/projectrecon"
-BACKEND_DIR="$HOME/projectrecon/projectrecon"
-FRONTEND_DIR="$HOME/projectrecon/pentest-dashboard"
+
+if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+    REAL_USER="$SUDO_USER"
+    REAL_HOME=$(eval echo "~$SUDO_USER")
+else
+    REAL_USER="$USER"
+    REAL_HOME="$HOME"
+fi
+
+
+MAIN_DIR="$REAL_HOME/projectrecon"
+BACKEND_DIR="$REAL_HOME/projectrecon/projectrecon"
+FRONTEND_DIR="$REAL_HOME/projectrecon/pentest-dashboard"
 PSQL_USER="postgres_pr"
 PSQL_PASSWORD="psqlnotsafe123"
 PSQL_DB="project_recon"
-DESKTOP_FILE="$HOME/.local/share/applications/projectrecon.desktop"
-PYTHON_ENV=".projectrecon_env"
+DESKTOP_FILE="$REAL_HOME/.local/share/applications/projectrecon.desktop"
+PYTHON_ENV="$REAL_HOME/.projectrecon_env"
+
+# Check for internet connectivity using ping
+echo "[INFO] Checking internet connectivity..."
+if ! ping -c 1 1.1.1.1 &> /dev/null; then
+    echo "[ERROR] No internet connection detected. Please connect to the internet and re-run the script."
+    exit 1
+fi
 
 # Update and install system requirements
 if command -v apt &> /dev/null; then
@@ -43,7 +60,7 @@ fi
 
 # Activate python environment
 python3 -m venv "$PYTHON_ENV"
-source ~/"$PYTHON_ENV"/bin/activate
+source "$PYTHON_ENV"/bin/activate
 
 # Clone github repo for both frontend and backend
 echo "[+] Cloning repositories..."
@@ -119,7 +136,7 @@ echo "[✅] PostgreSQL setup complete!"
 
 # Setup TMUX with custom aliases
 if [[ "$(basename "$SHELL")" == "bash" ]]; then
-cat << 'EOF' >> ~/.bashrc
+cat << 'EOF' >> $REAL_HOME/.bashrc
 
 # TMUX aliases
 function tns() {
@@ -135,7 +152,7 @@ alias tls='tmux list-sessions'
 
 # Project environment
 export PYTHONPATH="\$PYTHONPATH:\$BACKEND_DIR"
-source \$HOME/projectrecon_env/bin/activate
+source $HOME/projectrecon_env/bin/activate
 
 EOF
 
@@ -158,7 +175,7 @@ EOF
 
 # Setup TMUX for zsh with custom aliases
 elif [[ "$(basename "$SHELL")" == "zsh" ]]; then
-cat << 'EOF' >> ~/.zshrc
+cat << 'EOF' >> $REAL_HOME/.zshrc
 
 # TMUX aliases
 function tns() {
@@ -174,7 +191,7 @@ alias tls='tmux list-sessions'
 
 # Project environment
 export PYTHONPATH="\$PYTHONPATH:\$BACKEND_DIR"
-source \$HOME/projectrecon_env/bin/activate
+source $HOME/projectrecon_env/bin/activate
 
 EOF
 
@@ -202,7 +219,7 @@ fi
 # Notify
 echo "Project Recon Setup Completed"
 
-bash tool_setup.sh
+bash tool_install_setup.sh
 
 # Making Desktop entry
 mkdir -p "$(dirname "$DESKTOP_FILE")"

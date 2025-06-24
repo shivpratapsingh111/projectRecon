@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Detect real user (in case of sudo)
+if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+    REAL_USER="$SUDO_USER"
+    REAL_HOME=$(eval echo "~$SUDO_USER")
+else
+    REAL_USER="$USER"
+    REAL_HOME="$HOME"
+fi
+
+
 export DEBIAN_FRONTEND=noninteractive
 allTools=("assetfinder" "gf" "bbot" "getjs" "github-subdomains" "gitlab-subdomains" "sublist3r" "cero" "yass" "dnsresolver" "jsluice" "unfurl" "hakrawler" "ffuf" "subjs" "massdns" "fetcher" "subfinder" "amass" "subdominator" "haktrails" "waymore" "katana" "gau" "waybackurls" "nuclei" "kxss" "qsreplace" "dirsearch" "httpx" "dnsgen" "altdns" "alterx" "puredns")
 
@@ -10,7 +20,7 @@ missingAgain=()
 packetManager=""
 allPresent=0
 
-mkdir -p ~/tools
+mkdir -p "$REAL_HOME"/tools
 
 
 installmissingTools(){
@@ -51,7 +61,7 @@ installmissingTools(){
                 git clone https://github.com/blechschmidt/massdns.git /tmp/massdns && cd /tmp/massdns && make && mv bin/massdns /usr/local/bin/ && cd ../ && rm -rf massdns
                 ;;
             "dnsresolver")
-                git clone https://github.com/ethicalhackingplayground/dnsresolver ~/tools/dnsresolver && cd ~/tools/dnsresolver && echo | cargo install --path .
+                git clone https://github.com/ethicalhackingplayground/dnsresolver "$REAL_HOME"/tools/dnsresolver && cd "$REAL_HOME"/tools/dnsresolver && echo | cargo install --path .
                 ;;
             "ffuf")
                 /usr/local/go/bin/go install github.com/ffuf/ffuf/v2@latest
@@ -66,13 +76,13 @@ installmissingTools(){
                 /usr/local/go/bin/go install github.com/gwen001/gitlab-subdomains@latest
                 ;;
             "yass")
-                git clone https://github.com/shivpratapsingh111/yass.git ~/tools/yass && cd ~/tools/yass && pip3 install .
+                git clone https://github.com/shivpratapsingh111/yass.git "$REAL_HOME"/tools/yass && cd "$REAL_HOME"/tools/yass && pip3 install .
                 ;;
             "cero")
                 /usr/local/go/bin/go install github.com/glebarez/cero@latest
                 ;;
             "sublist3r")
-                git clone https://github.com/aboul3la/Sublist3r ~/tools/Sublist3r
+                git clone https://github.com/aboul3la/Sublist3r "$REAL_HOME"/tools/Sublist3r
                 ;;
 
 
@@ -125,10 +135,10 @@ installmissingTools(){
                 /usr/local/go/bin/go install -v github.com/lc/subjs@latest
                 ;;
             "gf")
-                /usr/local/go/bin/go install -v github.com/tomnomnom/gf@latest && git clone https://github.com/tomnomnom/gf /tmp/gf && mv /tmp/gf/examples ~/.gf
+                /usr/local/go/bin/go install -v github.com/tomnomnom/gf@latest && git clone https://github.com/tomnomnom/gf /tmp/gf && mv /tmp/gf/examples "$REAL_HOME"/.gf
                 ;;
             "gfpatterns")
-                git clone https://github.com/shivpratapsingh111/gfpatterns /tmp/gfpatterns && mkdir -p ~/.gf && mv /tmp/gfpatterns/done/* ~/.gf && mv ~/.gf/extensions/* ~/.gf/ && rm -rf ~/.gf/extensions
+                git clone https://github.com/shivpratapsingh111/gfpatterns /tmp/gfpatterns && mkdir -p "$REAL_HOME"/.gf && mv /tmp/gfpatterns/done/* "$REAL_HOME"/.gf && mv "$REAL_HOME"/.gf/extensions/* "$REAL_HOME"/.gf/ && rm -rf "$REAL_HOME"/.gf/extensions
                 ;;
             "jsluice")
                 /usr/local/go/bin/go install github.com/BishopFox/jsluice/cmd/jsluice@latest
@@ -139,8 +149,8 @@ installmissingTools(){
         esac
     done
 
-    if [ $(ls ~/go/bin | wc -l) -gt 0 ]; then
-        sudo mv ~/go/bin/* /usr/bin/
+    if [ $(ls "$REAL_HOME"/go/bin | wc -l) -gt 0 ]; then
+        sudo mv "$REAL_HOME"/go/bin/* /usr/bin/
     fi
 }
 
@@ -169,7 +179,7 @@ checkTools() {
     for tool in "${allTools[@]}"; do
         case "$tool" in
             sublist3r)
-                if ! python3 ~/tools/Sublist3r/sublist3r.py &>/dev/null; then
+                if ! python3 "$REAL_HOME"/tools/Sublist3r/sublist3r.py &>/dev/null; then
                     missingTools+=("$tool")
                 fi
                 ;;
@@ -263,13 +273,13 @@ updateUpgrade() {
         # apt install -y python3-pip && echo "[+] Python Installed" || echo "[+] Python Not Installed" | tee -a log.txt
         # apt install -y python3.11-venv && echo "[+] Python venv Installed" || echo "[+] Python venv not Installed" | tee -a log.txt
         # dir=$(pwd)
-        # cd ~ && echo "[+] Dir changed to '~'" || echo "[+] Dir didn't changed to '~'" | tee -a log.txt
+        # cd "$REAL_HOME" && echo "[+] Dir changed to '"$REAL_HOME"'" || echo "[+] Dir didn't changed to '"$REAL_HOME"'" | tee -a log.txt
         # python3 -m venv .venvPython && echo "[+] Python vevnv made" || echo "[+] Python vevnv not made  " | tee -a log.txt
         # source .venvPython/bin/activate && echo "[+] Python vevnv activated" || echo "[+] Python venv not activated" | tee -a log.txt
         # cd $dir  && echo "[+] Directory changed to $dir" || echo "[+] Directory not changed to $dir" | tee -a log.txt
-#        echo "#!/bin/bash" >> ~/.activatePythonVenv.sh
-#        echo "source ~/.venvPython/bin/activate" >> ~/.activatePythonVenv.sh
-#        chmod +x ~/.activatePythonVenv.sh
+#        echo "#!/bin/bash" >> "$REAL_HOME"/.activatePythonVenv.sh
+#        echo "source "$REAL_HOME"/.venvPython/bin/activate" >> "$REAL_HOME"/.activatePythonVenv.sh
+#        chmod +x "$REAL_HOME"/.activatePythonVenv.sh
 
 
 
@@ -402,11 +412,11 @@ updateUpgrade() {
     fi
 
 # Installing resolvers for Puredns from trickest
-    if ! [ -f '~/.config/puredns/resolvers.txt' ]; then
-        mkdir -p ~/.config/puredns
+    if ! [ -f "$REAL_HOME/.config/puredns/resolvers.txt" ]; then
+        mkdir -p "$REAL_HOME"/.config/puredns
         wget "https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt" 1> /dev/null
         wait
-        mv resolvers.txt ~/.config/puredns/resolvers.txt
+        mv resolvers.txt "$REAL_HOME"/.config/puredns/resolvers.txt
     fi
     
 
@@ -423,9 +433,9 @@ updateUpgrade() {
     fi
 
     if [ "$(echo $SHELL)" = "/bin/bash" ]; then
-        echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
+        echo "export PATH=$PATH:/usr/local/go/bin" >> "$REAL_HOME"/.bashrc
     elif [ "$(echo $SHELL)" = "/bin/zsh" ]; then
-        echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.zshrc
+        echo "export PATH=$PATH:/usr/local/go/bin" >> "$REAL_HOME"/.zshrc
     else
         echo "Neither Bash nor Zsh is detected as the default shell. Please change your shell to one of these"
     fi 
@@ -443,7 +453,7 @@ fi
 
 # activate python env if not activated
 
-VENV_PATH=~/projectrecon_env
+VENV_PATH="$REAL_HOME"/projectrecon_env
 ACTIVATE_SCRIPT="$VENV_PATH/bin/activate"
 
 # Check if the virtual environment exists
@@ -479,9 +489,9 @@ if [[ $isDebian -eq 1 ]]; then
     echo "[+] Set API keys in config file for waymore & subfinder"
     echo -e "[+] Run below command to change timezone if you are using a VPS:\nsudo timedatectl set-timezone Asia/Kolkata"
     if [ "$(echo $SHELL)" = "/bin/bash" ]; then
-        echo -e "[+] Please log out and log in again, or use below command:\nsource ~/.bashrc"
+        echo -e "[+] Please log out and log in again, or use below command:\nsource $REAL_HOME/.bashrc"
     elif [ "$(echo $SHELL)" = "/bin/zsh" ]; then
-        echo -e "[+] Please log out and log in again, or use below command:\nsource ~/.zshrc"
+        echo -e "[+] Please log out and log in again, or use below command:\nsource "$REAL_HOME"/.zshrc"
     else
         echo "Neither Bash nor Zsh is detected as the default shell. Please change your shell to one of these"
     fi 
@@ -491,5 +501,4 @@ fi
 
 # ===========================================[Code Runs from here]
 
-projectReconSetup
 mainFunction
