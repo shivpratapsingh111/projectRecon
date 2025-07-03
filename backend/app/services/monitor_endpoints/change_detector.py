@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 
 # Internal imports
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization

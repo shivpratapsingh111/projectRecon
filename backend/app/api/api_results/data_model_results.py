@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any, TypeVar, Generic
 from enum import Enum
 
 # Internal imports
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Intialization

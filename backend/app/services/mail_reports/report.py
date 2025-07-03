@@ -9,7 +9,7 @@ from datetime import datetime
 # Internal imports
 from app.interface.database_manager import db_ops
 from .report_templates import get_report_template
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 
 # Initialization
 logger = setup_logger(__name__, log_file_path="service", enable_debug=False)

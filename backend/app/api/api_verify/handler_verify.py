@@ -5,7 +5,7 @@ from typing import Literal
 import traceback
 
 # Internal imports
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from .data_model_verify import Generic__Response, EnvironmentReport__Response
 from .verify_setup import verify_setup

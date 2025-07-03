@@ -5,7 +5,7 @@ from pydantic import BaseModel, HttpUrl, EmailStr, Field, field_validator
 from typing import Optional, TypeVar, Dict, Any
 
 # Internal imports
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Intialization

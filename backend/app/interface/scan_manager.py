@@ -6,7 +6,7 @@ from app.services.scans.js import start_js_scan
 from app.services.scans.urls import start_urls_scan
 from app.services.scans.subdomains import start_subdomains_scan
 from app.services.scans.nuclei import start_nuclei_scan
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG, ROOT_DATA_DIR
 from app.interface.database_manager import db_ops
 from app.interface.json_data_manager import ProgramManager

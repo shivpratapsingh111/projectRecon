@@ -96,7 +96,8 @@ def check_postgres(cfg, family):
     global is_postgres_functional
     try:
         subprocess.check_call(
-            ["psql", "-U", cfg["postgres"]["user"], "-c", "\\q"],
+            # ["psql", "-U", cfg["postgres"]["user"], "-c", "\\q"],
+            ["sudo", "-u", cfg["postgres"]["user"], "psql"],
             env={**os.environ, "PGPASSWORD": cfg["postgres"]["password"]}
         )
         is_postgres_functional = True

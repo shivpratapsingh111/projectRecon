@@ -7,7 +7,7 @@ from typing import List
 # Internal imports
 from app.config.config  import LOG_LEVEL_DEBUG
 from app.services.mail_reports.report import send_report
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from .data_model_report import Generic__Response, ReportList__Request, Report__Response
 
 # Initialization

@@ -30,7 +30,7 @@ tools:
     - assetfinder
     - gf
     - bbot
-    - getjs
+    - getJS
     - github-subdomains
     - gitlab-subdomains
     - cero

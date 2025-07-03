@@ -7,7 +7,7 @@ from typing import List, Tuple, Literal, Dict
 # Internal imports
 from app.interface.json_data_manager import ProgramManager
 from app.config.config import ROOT_DATA_DIR, LOG_LEVEL_DEBUG
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 
 # Initialization
 logger = setup_logger(__name__, log_file_path="interface", enable_debug=LOG_LEVEL_DEBUG)

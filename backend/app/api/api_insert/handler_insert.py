@@ -4,7 +4,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
 # Internal imports
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from .insert_manager import insert_program
 from .insert_manager import insert_mobile_target

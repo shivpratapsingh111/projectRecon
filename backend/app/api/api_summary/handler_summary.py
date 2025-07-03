@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query, status
 
 # Internal imports
 from app.interface.database_manager import db_ops
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 from .data_model_summary import Generic__Response, DataCount__Response
 

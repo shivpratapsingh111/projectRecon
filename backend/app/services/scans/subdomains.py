@@ -4,7 +4,7 @@ import subprocess, psycopg2, json, os
 
 # External imports
 from app.interface.process_manager import run_commands
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.interface.database_manager import db_ops
 from app.config.db_config  import DB_CONFIG
 from app.config.config import (

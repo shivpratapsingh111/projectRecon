@@ -6,7 +6,7 @@ import asyncio, subprocess, signal, sys, uvicorn
 from uvicorn import Config, Server
 
 # Internal imports
-from backend.app.config.config import BACKEND_DIR, FRONTEND_DIR
+from app.config.config import BACKEND_DIR, FRONTEND_DIR
 
 # Initalization
 app = FastAPI()

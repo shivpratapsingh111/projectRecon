@@ -4,7 +4,7 @@ import asyncio, traceback, urllib.request, urllib.parse
 
 # Internal imports
 from app.services.monitor_endpoints.service_monitor import monitor_endpoints
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.interface.database_manager import db_ops
 from app.config.config import (
     TELEGRAM_WEBHOOK,

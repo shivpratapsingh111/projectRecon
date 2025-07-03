@@ -4,7 +4,7 @@ import psycopg2
 
 # Internal imports
 from app.db.db_queries import QueryManager
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization

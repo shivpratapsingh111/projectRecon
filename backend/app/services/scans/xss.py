@@ -4,7 +4,7 @@ import os
 # Internal imports
 from app.config.config import ROOT_DATA_DIR, LOG_LEVEL_DEBUG, urls_file, xssResults
 from app.interface.process_manager import run_commands
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 
 logger = setup_logger(__name__, log_file_path="service", enable_debug=LOG_LEVEL_DEBUG)
 

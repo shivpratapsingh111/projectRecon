@@ -16,7 +16,7 @@ from typing import Literal, Optional
 # Internal imports
 from app.api.api_scan.new_scan import new_scan
 from app.api.api_scan.scan_db_manager import get_existing_program_names
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from .data_model_scan import (
     Generic__Response,
     ProgramsData__Response,
@@ -28,7 +28,7 @@ from .data_model_scan import (
     StopProgramProcess__Response,
 )
 from app.interface.process_manager import CommandExecutor
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import LOG_LEVEL_DEBUG
 
 # Initialization

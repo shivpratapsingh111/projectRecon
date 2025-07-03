@@ -3,7 +3,7 @@ import os, subprocess
 
 # Internal imports
 from app.interface.process_manager import run_commands
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import (
     ROOT_DATA_DIR,
     LOG_LEVEL_DEBUG,
@@ -46,12 +46,19 @@ def func_urls_ps(
         os.makedirs(f"{result_dir}/.logs", exist_ok=True)
         os.makedirs(f"{result_dir}/.tmp", exist_ok=True)
 
+        # Define the primary and fallback paths
+        subdomains_path = f"{domain_dir}/subdomains/{subdomains_file}"
+        fallback_path = f"{ROOT_DATA_DIR}/{program_name}/targets.txt"
+
+        target_path = subdomains_path if os.path.exists(subdomains_path) else fallback_path
+
+        # Define the command dictionary
         cmd = {
-            "waybackurls_cmd": f"cat {domain_dir}/subdomains/{subdomains_file} | waybackurls",
-            "gau_cmd": f"cat {domain_dir}/subdomains/{subdomains_file} | gau",
+            "waybackurls_cmd": f"cat {target_path} | waybackurls",
+            "gau_cmd": f"cat {target_path} | gau",
             "waymore_cmd": f"waymore -n -xwm -urlr 0 -r 2 -i {domain} -mode U -oU {result_dir}/{waymore}",
-            "katana_cmd": f"katana --no-sandbox -u {domain_dir}/subdomains/{subdomains_file} -headless -no-color -depth 5 -aff -retry 2 -iqp -concurrency 5 -parallelism 5 -rate-limit 25 -xhr-extraction -js-crawl -known-files -extension-filter css,jpg,jpeg,png,svg,img,gif,mp4,flv,ogv,webm,webp,mov,mp3,m4a,m4p,scss,tif,tiff,ttf,otf,woff,woff2,bmp,ico,eot,htc,rtf,swf,image -o {result_dir}/{katana}",
-            "hakrawler_cmd": f"cat {domain_dir}/subdomains/{subdomains_file} | sed 's/^/https:\\/\\//' | hakrawler -d 5 -insecure -subs -t 5",
+            "katana_cmd": f"katana --no-sandbox -u {target_path} -headless -no-color -depth 5 -aff -retry 2 -iqp -concurrency 5 -parallelism 5 -rate-limit 25 -xhr-extraction -js-crawl -known-files -extension-filter css,jpg,jpeg,png,svg,img,gif,mp4,flv,ogv,webm,webp,mov,mp3,m4a,m4p,scss,tif,tiff,ttf,otf,woff,woff2,bmp,ico,eot,htc,rtf,swf,image -o {result_dir}/{katana}",
+            "hakrawler_cmd": f"cat {target_path} | sed 's/^/https:\\/\\//' | hakrawler -d 5 -insecure -subs -t 5",
         }
 
         all_commands = [

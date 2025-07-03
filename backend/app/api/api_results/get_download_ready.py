@@ -20,7 +20,7 @@ from app.config.config import (
     sensitive_data,
     sensitive_keywords,
 )
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 
 # Initialization
 logger = setup_logger(

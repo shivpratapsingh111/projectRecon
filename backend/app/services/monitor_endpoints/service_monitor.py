@@ -7,7 +7,7 @@ import mimetypes, aiohttp, asyncio, hashlib, socket, random, ssl, os
 
 # Internal imports
 from .change_detector import EndpointChangeDetector
-from app.interface.logger import setup_logger
+from app.interface.logger_manager import setup_logger
 from app.config.config import ROOT_DATA_DIR, LOG_LEVEL_DEBUG
 from app.interface.database_manager import db_ops
 
