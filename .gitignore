@@ -11,3 +11,4 @@ targets.txt
 TODO
 .env
 venv/
+*.ign

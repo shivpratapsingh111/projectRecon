@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # External imports
-import webbrowser, time, os
+import webbrowser, time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import asyncio, subprocess, signal, sys, uvicorn
+import asyncio, subprocess, signal, sys
 from uvicorn import Config, Server
 
 # Internal imports
-from app.config.config import BACKEND_DIR, FRONTEND_DIR
+from backend.app.config.config import BACKEND_DIR, FRONTEND_DIR
 
 # Initalization
 app = FastAPI()

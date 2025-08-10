@@ -193,20 +193,20 @@ def func_subdomains_ac(program_name, domain_list, execution_style, program_uuid,
         commands = [
             (
                 "alterx",
-                f"cat {result_dir}/{passive_subdomains} | alterx", 
-                f"{result_dir}/{alterx.removesuffix('.txt')}_stdout", 
+                f"cat {result_dir}/{passive_subdomains} | alterx | tee -a {result_dir}/{alterx}", 
+                f"{result_dir}/.logs/{alterx.removesuffix('.txt')}_stdout", 
                 f"{result_dir}/.logs/{alterx.removesuffix('.txt')}_stderr"
             )
         ]
         program_results[domain] = run_commands(program_name, domain, commands, program_uuid, target_uuid, scan_dir="subdomains", execution_style=execution_style)
         
-        # Second command: DNS resolver (DO NOT MERGE THIS IN ABOVE: this command will resolve subdomains permuted, so it has to run only after permutations has done)
+        # Second command: DNS resolver (DO NOT MERGE THIS IN ABOVE ONE: this command will resolve permuted subdomains, so it has to run only after permutations has done)
         commands = [
             (
                 "dnsresolver",
-                f"cd {result_dir} ; cat {alterx} | dnsresolver --resolvers {puredns_ResolversFile} ; mv {alterx} .tmp/",
-                f"{result_dir}/{active_subdomains}",
-                f"{result_dir}/.logs/{active_subdomains}"
+                f"cd {result_dir} ; cat {alterx} | dnsresolver --resolvers {puredns_ResolversFile} -t 3 -c 100 -r 100 | tee -a {active_subdomains} ; mv {alterx} .tmp/",
+                f"{result_dir}/.logs/{active_subdomains}_stdout",
+                f"{result_dir}/.logs/{active_subdomains}_stderr"
             )
         ]
         program_results[f"{domain}_dnsresolver"] = run_commands(program_name, domain, commands, program_uuid, target_uuid, scan_dir="subdomains", execution_style="sequential")
