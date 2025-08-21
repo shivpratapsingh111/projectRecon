@@ -69,7 +69,7 @@ def start_js_scan(program_name, domain_list, execution_style, nuclei_enum, progr
             # ),
             (
                 "Nuclei",
-                f"nuclei -l {ROOT_DATA_DIR}/{program_name}/{domain}/js/{js_urls} -t ~/nuclei-templates/exposures/ -o {result_dir}/{nuclei_file} ; cat {result_dir}/{nuclei_file} >> {ROOT_DATA_DIR}/{program_name}/{domain}/nuclei/{nuclei_file}",
+                f"nuclei -l {ROOT_DATA_DIR}/{program_name}/{domain}/js/{js_urls} -t ~/nuclei-templates/http/exposures/ -o {result_dir}/{nuclei_file} ; cat {result_dir}/{nuclei_file} >> {ROOT_DATA_DIR}/{program_name}/{domain}/nuclei/{nuclei_file}",
                 f"{result_dir}/.logs/{nuclei_file.removesuffix('.txt')}_stdout",
                 f"{result_dir}/.logs/{nuclei_file.removesuffix('.txt')}_stderr"
             )
