@@ -89,7 +89,7 @@ def func_subdomains_ps(program_name, domain_list, execution_style, include_api, 
         os.makedirs(f"{result_dir}/.tmp", exist_ok=True)
 
         cmd = {
-            "bbot_cmd": f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} -y --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv github_codesearch github_org httpx hunterio crt_db ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar --exclude-modules dnsbrute dnsbrute_mutations wayback",
+            "bbot_cmd": f"bbot -t {domain} -f subdomain-enum -n bbot -o {result_dir} -y --modules asn azure_realm azure_tenant baddns_direct baddns_zone dnsbimi dnscaa dnscommonsrv github_codesearch github_org httpx hunterio secretsdb ipneighbor oauth otx postman postman_download securitytxt shodan_dns sslcert subdomainradar --exclude-modules dnsbrute dnsbrute_mutations wayback",
 
             "subdominator_cmd": f"subdominator -d {domain} --no-color --disable-update-check -o {result_dir}/{subdominator}" + (" --config-path ~/.config/projectRecon/api-subdominator.txt" if include_api else ""),
 
