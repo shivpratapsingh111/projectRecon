@@ -36,12 +36,12 @@ def start_js_scan(program_name, domain_list, execution_style, nuclei_enum, progr
             #     f"{result_dir}/.logs/{getJS_urls.removesuffix('.txt')}_stdout",
             #     f"{result_dir}/.logs/{getJS_urls.removesuffix('.txt')}_stderr"
             # ),
-            # (
-            #     "Downloading JS files",
-            #     f"cp {ROOT_DATA_DIR}/{program_name}/{domain}/urls/{js_urls} {result_dir}/{js_urls} && cat {result_dir}/{js_urls} {result_dir}/{getJS_urls} | sort -u -o {result_dir}/{js_urls} && fetcher -f {result_dir}/{js_urls} -dir {result_dir}/jsfiles -t 10",
-            #     f"{result_dir}/.logs/downloading_js_files_stdout",
-            #     f"{result_dir}/.logs/downloading_js_files_stderr"
-            # ),
+            (
+                "Downloading JS files",
+                f"cp {ROOT_DATA_DIR}/{program_name}/{domain}/urls/{js_urls} {result_dir}/{js_urls} && cat {result_dir}/{js_urls} | sort -u -o {result_dir}/{js_urls} && fetcher -f {result_dir}/{js_urls} -dir {result_dir}/jsfiles -t 10",
+                f"{result_dir}/.logs/downloading_js_files_stdout",
+                f"{result_dir}/.logs/downloading_js_files_stderr"
+            ),
             (
                 "Extracting Urls",
                 # f"cat {result_dir}/jsfiles/* | gf urls | tee -a {result_dir}/{extracted_urls}",

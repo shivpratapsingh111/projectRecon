@@ -27,6 +27,38 @@
 [Use case update]
 - If a tool fails to run, like subfinder on a particular domain, make the flow such that a user can rerun that particular tool and it will appened new domains found by subfinder to the already found subdomains list.
 
+[ERROR]
+
+When clicked on extensions in frontend
+"""
+2025-08-21 19:23:25,147 - ERROR - app.api.api_results.read_results - read_results.py:122 - Error reading file /home/retro/projectRecon-Data/Global/global.com/urls/extensions.txt: 'utf-8' codec can't decode bytes in position 6817-6818: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/retro/bugBounty/frameworks/projectrecon/backend/app/api/api_results/read_results.py", line 104, in read_file
+    lines = [line.strip() async for line in file]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/aiofiles/base.py", line 26, in __anext__
+    line = await self.readline()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/aiofiles/threadpool/utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode bytes in position 6817-6818: invalid continuation byte
+[ERROR] Failed to send Telegram message. [Maybe No Internet]
+2025-08-21 19:23:25,150 - ERROR - app.api.api_results.read_results - read_results.py:260 - Unexpected error while reading FileType.extensions file: 'content'
+Traceback (most recent call last):
+  File "/home/retro/bugBounty/frameworks/projectrecon/backend/app/api/api_results/read_results.py", line 257, in http_read_results
+    return await http_fetch_results(target_uuid, file_type, limit, offset)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/retro/bugBounty/frameworks/projectrecon/backend/app/api/api_results/read_results.py", line 241, in http_fetch_results
+    "content": file_data["content"],
+               ~~~~~~~~~^^^^^^^^^^^
+KeyError: 'content'
+"""
+
 
 ===[pentest-dashboard]
 
