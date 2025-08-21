@@ -1,0 +1,32 @@
+===[projectrecon]
+
+[FIXES]
+- Fix Naming, when user provides program name with space (ex: "Google LLC"), it breaks the command, replace the sapce with '_' (ex: "Google_LLC")
+- Fix the dev and prod environment thing in config.py
+- Fix the status updation of the program in the json data file.
+- Fix the re run command feature, add 'anew' to update the relevant results only.
+- Fix the scan re run feature, so user can re run scan on the same domain again without issues
+
+[UPDATES]
+- Separate DB insertion from scan files. (ex: subdomains.py)
+- Write the commands in a yaml file instead of in the same scan file.
+- Modify the architechure/design of scan execution.
+  Make it to work in form of queue, as now if you want to stop all the scans of a domain you need to click again and again until all tools of each scan gets killed.
+  Once you make it in queue form, as soon as user cancels the scan stop the current processes and empty the queue.
+- Include this in setup
+  - Copy provider-config.yaml of subfinder and subdominator in ~/.config/projectRecon
+    - api-subdominator.txt
+    - api-subfinder.txt
+  - Make empty blueprint file also for both, and use them when "Use API" is set to false, and use above mentioned files when it is set to True, to tackle edge cases.
+- Instead of making an array to store reported vulnerability, make two columns for each vulnerability and make them true/false.
+- Maybe write some test cases?
+
+[Use case update]
+- If a tool fails to run, like subfinder on a particular domain, make the flow such that a user can rerun that particular tool and it will appened new domains found by subfinder to the already found subdomains list.
+
+
+===[pentest-dashboard]
+
+- Add scrollbar in url and subdomain display section
+- Update the status of the command (process) when user clicks on `kill` button.
+

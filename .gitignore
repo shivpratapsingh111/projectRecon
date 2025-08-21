@@ -8,7 +8,6 @@ log.txt
 log.log
 logs.txt
 targets.txt
-TODO
 .env
 venv/
 *.ign
