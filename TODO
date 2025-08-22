@@ -9,6 +9,9 @@
 - Fix the re run command feature, add 'anew' to update the relevant results only.
 - Fix the scan re run feature, so user can re run scan on the same domain again without issues
 - Fix the stauts updation feature of domain when 'completed' or 'running', it changes to 'completed' as sson as subdomains get done.
+- While setup, check if user already has old version of node, then install and setup a new one for frontend to work properly.
+- Fix the setup thingy, when run setup files using sudo and without it, it clashes badly
+
 
 [UPDATES]
 - Separate DB insertion from scan files. (ex: subdomains.py)

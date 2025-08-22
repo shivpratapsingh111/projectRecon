@@ -1,6 +1,6 @@
 checkTools() {
     # Define tool list
-    allTools=("assetfinder" "gf" "bbot" "getjs" "github-subdomains" "gitlab-subdomains" "sublist3r" "cero" "yass" "dnsresolver" "jsluice" "unfurl" "hakrawler" "ffuf" "subjs" "massdns" "fetcher" "subfinder" "amass" "subdominator" "haktrails" "waymore" "katana" "gau" "waybackurls" "nuclei" "kxss" "qsreplace" "dirsearch" "httpx" "dnsgen" "altdns" "alterx" "puredns")
+    allTools=("assetfinder" "gf" "bbot" "getJS" "github-subdomains" "gitlab-subdomains" "sublist3r" "cero" "yass" "dnsresolver" "jsluice" "unfurl" "hakrawler" "ffuf" "subjs" "massdns" "fetcher" "subfinder" "amass" "subdominator" "haktrails" "waymore" "katana" "gau" "waybackurls" "nuclei" "kxss" "qsreplace" "dirsearch" "httpx" "dnsgen" "altdns" "alterx" "puredns")
     missingTools=()
 
     for tool in "${allTools[@]}"; do

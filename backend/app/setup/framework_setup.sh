@@ -86,7 +86,7 @@ echo "[+] Starting PostgreSQL service..."
 sudo systemctl enable postgresql
 sudo systemctl start postgresql
 echo "[+] Creating PostgreSQL user "$PSQL_USER" with password..."
-sudo -u postgres psql -c "CREATE USER "$PSQL_USER" WITH SUPERUSER PASSWORD "$PSQL_PASSWORD";"
+sudo -u postgres psql -c "CREATE USER $PSQL_USER WITH SUPERUSER PASSWORD "$PSQL_PASSWORD";"
 echo "[+] Configuring PostgreSQL to allow remote password authentication..."
 
 
