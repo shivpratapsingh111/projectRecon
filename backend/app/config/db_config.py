@@ -1,5 +1,5 @@
 DB_CONFIG = {
-    'dbname': 'main_db_test',
+    'dbname': 'projectrecon_dev',
     'user': 'postgres',
     'password': 'postgres',
     'host': 'localhost'
