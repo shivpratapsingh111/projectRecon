@@ -24,10 +24,11 @@ def start_scan(program_name, domain_list, execution_style, scan_config):
         - Write provided targets to targets.txt
         - Call run_scans
     """
-    target_dir = f"{ROOT_DATA_DIR}/{program_name}"
-    os.makedirs(target_dir, exist_ok=True)
-    logger.debug(f"Made target dir {target_dir}")
-    targets_file = f"{target_dir}/targets.txt"
+    
+    program_dir = f"{ROOT_DATA_DIR}/{program_name.strip().replace(' ', '_')}" # replcae spaces in program name with underscores
+    os.makedirs(program_dir, exist_ok=True)
+    logger.debug(f"Made target dir {program_dir}")
+    targets_file = f"{program_dir}/targets.txt"
     
     existing_domains = set()
     if os.path.exists(targets_file):

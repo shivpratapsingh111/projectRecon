@@ -3,8 +3,8 @@
 - Show subdomains on top, that only one or two subdomain servcies were able to found, it means that they are rare ones.
 
 [FIXES]
-- Fix Naming, when user provides program name with space (ex: "Google LLC"), it breaks the command, replace the sapce with '_' (ex: "Google_LLC")
-- Fix the dev and prod environment thing in config.py
+- [DONE] Fix Naming, when user provides program name with space (ex: "Google LLC"), it breaks the command, replace the sapce with '_' (ex: "Google_LLC")
+- [Done] Fix the dev and prod environment thing in config.py
 - Fix the status updation of the program in the json data file.
 - Fix the re run command feature, add 'anew' to update the relevant results only.
 - Fix the scan re run feature, so user can re run scan on the same domain again without issues
